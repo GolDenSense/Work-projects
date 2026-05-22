@@ -1,0 +1,724 @@
+WITH ObjectCodes AS (
+    SELECT 
+        rcao.ObjCode
+    FROM DataPrime.RolesCliAmongObj rcao
+    LEFT JOIN descclibrand dcb ON dcb.CliCode = rcao.CliCode
+    WHERE
+        rcao.RoleCode IN ('ГЕНПОДРЯДЧИК', 'СОБСТВЕННИК')
+    AND dcb.CliBrandCode IN ( 
+        330212941, 330212711, 9175014, 55122747, 87216898, 330212772, 90215077, 970092413, 9175029, 330212952,
+        90122844, 9175013, 9175019, 55049852, 330212997, 9175016, 90052035, 90053248, 90053228, 9175126,
+        9103535, 330212554, 9217111, 440165466, 9175015, 970170504, 9175051, 9174999, 970227809, 330210304,
+        9175066, 9175123, 9175148, 9211646, 9175026, 9175140, 440151344, 9175045, 9175130, 9175143,
+        440165970, 9175035, 330213110, 440156592, 440165980, 440167754, 440168123, 1444464, 23015952, 440150999,
+        440166439, 440166457, 60190841, 87241955, 9175064, 9175115, 330212766, 440157518, 440167256, 90070142,
+        9175011, 9175052, 9175070, 9175107, 9151081, 9175023, 9175114)
+),
+FilteredObjects AS (
+    SELECT DISTINCT ObjCode
+    FROM ObjectCodes
+),
+RolesWithPriority AS (
+    SELECT 
+        rcao.ObjCode,
+        rcao.CliCode,
+        dcb.CliBrandCode,
+        dcb.CliBrandName,
+        rcao.RoleCode,
+        CASE WHEN rcao.RoleCode IN ('СОБСТВЕННИК','ЗАСТРОЙЩИК') THEN dcb.CliBrandName ELSE NULL END AS Застройщик,
+        od.ObjName,
+        CASE
+            WHEN rcao.RoleCode IN ('СОБСТВЕННИК','ЗАСТРОЙЩИК') THEN 1
+            WHEN rcao.RoleCode = 'ГЕНПОДРЯДЧИК' THEN 2
+            WHEN rcao.RoleCode = 'ТЕХ.ЗАКАЗЧИК' THEN 3
+            WHEN rcao.RoleCode = 'ПОДРЯДЧИК' THEN 4
+            WHEN rcao.RoleCode = 'КОМПЛЕКТОВЩИК' THEN 5
+            WHEN rcao.RoleCode = 'ИСПОЛНИТЕЛЬ' THEN 6
+            WHEN rcao.RoleCode = 'АРЕНДАТОР' THEN 7
+            WHEN rcao.RoleCode ='АГЕНТ/ОПЕРАТОР' THEN 8
+            ELSE 9
+        END AS Priority,
+        ROW_NUMBER() OVER (
+            PARTITION BY rcao.CliCode, rcao.ObjCode
+            ORDER BY 
+                CASE
+                     WHEN rcao.RoleCode IN ('СОБСТВЕННИК','ЗАСТРОЙЩИК') THEN 1
+                     WHEN rcao.RoleCode = 'ГЕНПОДРЯДЧИК' THEN 2
+                     WHEN rcao.RoleCode = 'ТЕХ.ЗАКАЗЧИК' THEN 3
+                     WHEN rcao.RoleCode = 'ПОДРЯДЧИК' THEN 4
+                     WHEN rcao.RoleCode = 'КОМПЛЕКТОВЩИК' THEN 5
+                     WHEN rcao.RoleCode = 'ИСПОЛНИТЕЛЬ' THEN 6
+                     WHEN rcao.RoleCode = 'АРЕНДАТОР' THEN 7
+                     WHEN rcao.RoleCode ='АГЕНТ/ОПЕРАТОР' THEN 8
+                     ELSE 9
+                END
+        ) AS rn
+    FROM DataPrime.RolesCliAmongObj rcao
+    LEFT JOIN descclibrand dcb ON dcb.CliCode = rcao.CliCode
+    LEFT JOIN DataPrime.ObjDesc od ON rcao.ObjCode = od.ObjCode
+    WHERE rcao.ObjCode IN (SELECT ObjCode FROM FilteredObjects)
+),
+Builders AS (
+    SELECT 
+        ObjCode,
+        MAX(CASE WHEN RoleCode IN ('СОБСТВЕННИК','ЗАСТРОЙЩИК') THEN CliBrandName END) AS Имя_Застройщик,
+        MAX(CASE WHEN RoleCode = 'ГЕНПОДРЯДЧИК' THEN CliBrandName END) AS Имя_ГенПодрядчик
+    FROM RolesWithPriority
+    GROUP BY ObjCode
+),
+Responsibility AS (
+    SELECT DISTINCT
+        rcao.ObjCode,
+        dcb.CliBrandCode,
+        CASE 
+            WHEN dcb.CliBrandCode = 330212941 THEN 'Борисов Николай'
+            WHEN dcb.CliBrandCode = 330212711 THEN 'Борисов Николай'
+            WHEN dcb.CliBrandCode = 9175014 THEN 'Борисов Николай'
+            WHEN dcb.CliBrandCode = 55122747 THEN 'Николаева Ольга'
+            WHEN dcb.CliBrandCode = 87216898 THEN 'Силаева Наталья'
+            WHEN dcb.CliBrandCode = 330212772 THEN 'Силаева Наталья'
+            WHEN dcb.CliBrandCode = 90215077 THEN 'Кухтина Татьяна'
+            WHEN dcb.CliBrandCode = 970092413 THEN 'Кухтина Татьяна'
+            WHEN dcb.CliBrandCode = 9175029 THEN 'Ольховик Елена'
+            WHEN dcb.CliBrandCode = 330212952 THEN 'Ольховик Елена'
+            WHEN dcb.CliBrandCode = 90122844 THEN 'Ольховик Елена'
+            WHEN dcb.CliBrandCode = 9175013 THEN 'Басуева Людмила'
+            WHEN dcb.CliBrandCode = 9175019 THEN 'Басуева Людмила'
+            WHEN dcb.CliBrandCode = 55049852 THEN 'Басуева Людмила'
+            WHEN dcb.CliBrandCode = 330212997 THEN 'Гусева Татьяна'
+            WHEN dcb.CliBrandCode = 9175016 THEN 'Гусева Татьяна'
+            WHEN dcb.CliBrandCode = 90052035 THEN 'Сурова Ирина'
+            WHEN dcb.CliBrandCode = 90053248 THEN 'Сурова Ирина'
+            WHEN dcb.CliBrandCode = 90053228 THEN 'Сурова Ирина'
+            WHEN dcb.CliBrandCode = 9175126 THEN 'Сурова Ирина'
+            WHEN dcb.CliBrandCode = 9103535 THEN 'Петров Александр'
+            WHEN dcb.CliBrandCode = 330212554 THEN 'Петров Александр'
+            WHEN dcb.CliBrandCode = 9217111 THEN 'Петров Александр'
+            WHEN dcb.CliBrandCode = 440165466 THEN 'Хрунич Алексей'
+            WHEN dcb.CliBrandCode = 9175015 THEN 'Хрунич Алексей'
+            WHEN dcb.CliBrandCode = 970170504 THEN 'Хрунич Алексей'
+            WHEN dcb.CliBrandCode = 9175051 THEN 'Хрунич Алексей'
+            WHEN dcb.CliBrandCode = 9174999 THEN 'Новый'
+            WHEN dcb.CliBrandCode = 970227809 THEN 'Новый'
+            ELSE 'Неизвестно'
+        END AS Ответственный
+    FROM DataPrime.RolesCliAmongObj rcao
+    LEFT JOIN descclibrand dcb ON dcb.CliCode = rcao.CliCode
+    WHERE 
+        rcao.RoleCode IN ('ГЕНПОДРЯДЧИК','СОБСТВЕННИК') AND dcb.CliBrandCode IN ( 
+        330212941, 330212711, 9175014, 55122747, 87216898, 330212772, 90215077, 970092413, 9175029, 330212952,
+        90122844, 9175013, 9175019, 55049852, 330212997, 9175016, 90052035, 90053248, 90053228, 9175126,
+        9103535, 330212554, 9217111, 440165466, 9175015, 970170504, 9175051, 9174999, 970227809, 330210304,
+        9175066, 9175123, 9175148, 9211646, 9175026, 9175140, 440151344, 9175045, 9175130, 9175143,
+        440165970, 9175035, 330213110, 440156592, 440165980, 440167754, 440168123, 1444464, 23015952, 440150999,
+        440166439, 440166457, 60190841, 87241955, 9175064, 9175115, 330212766, 440157518, 440167256, 90070142,
+        9175011, 9175052, 9175070, 9175107, 9151081, 9175023, 9175114)),
+ResponsibilityOverall AS (
+SELECT DISTINCT ObjCode,Ответственный
+FROM Responsibility ),
+CommonTable AS (SELECT 
+    rwp.*,
+    b.Имя_Застройщик,
+    b.Имя_ГенПодрядчик,
+    respov.Ответственный AS Ответственный_За_Застройщика
+FROM RolesWithPriority rwp
+LEFT JOIN Builders b ON rwp.ObjCode = b.ObjCode
+LEFT JOIN ResponsibilityOverall respov ON rwp.ObjCode = respov.ObjCode
+WHERE rwp.rn = 1
+ORDER BY ObjCode,CliCode),
+RoleRespBrand AS (SELECT DISTINCT
+        dcb.CliBrandCode,
+          CASE 
+    WHEN dcb.CliBrandCode = 330212941 THEN 'Борисов Николай'
+    WHEN dcb.CliBrandCode = 330212711 THEN 'Борисов Николай'
+    WHEN dcb.CliBrandCode = 9175014 THEN 'Борисов Николай'
+    WHEN dcb.CliBrandCode = 55122747 THEN 'Николаева Ольга'
+    WHEN dcb.CliBrandCode = 87216898 THEN 'Силаева Наталья'
+    WHEN dcb.CliBrandCode = 330212772 THEN 'Силаева Наталья'
+    WHEN dcb.CliBrandCode = 90215077 THEN 'Кухтина Татьяна'
+    WHEN dcb.CliBrandCode = 970092413 THEN 'Кухтина Татьяна'
+    WHEN dcb.CliBrandCode = 9175029 THEN 'Ольховик Елена'
+    WHEN dcb.CliBrandCode = 330212952 THEN 'Ольховик Елена'
+    WHEN dcb.CliBrandCode = 90122844 THEN 'Ольховик Елена'
+    WHEN dcb.CliBrandCode = 9175013 THEN 'Басуева Людмила'
+    WHEN dcb.CliBrandCode = 9175019 THEN 'Басуева Людмила'
+    WHEN dcb.CliBrandCode = 55049852 THEN 'Басуева Людмила'
+    WHEN dcb.CliBrandCode = 330212997 THEN 'Гусева Татьяна'
+    WHEN dcb.CliBrandCode = 9175016 THEN 'Гусева Татьяна'
+    WHEN dcb.CliBrandCode = 90052035 THEN 'Сурова Ирина'
+    WHEN dcb.CliBrandCode = 90053248 THEN 'Сурова Ирина'
+    WHEN dcb.CliBrandCode = 90053228 THEN 'Сурова Ирина'
+    WHEN dcb.CliBrandCode = 9175126 THEN 'Сурова Ирина'
+    WHEN dcb.CliBrandCode = 9103535 THEN 'Петров Александр'
+    WHEN dcb.CliBrandCode = 330212554 THEN 'Петров Александр'
+    WHEN dcb.CliBrandCode = 9217111 THEN 'Петров Александр'
+    WHEN dcb.CliBrandCode = 440165466 THEN 'Хрунич Алексей'
+    WHEN dcb.CliBrandCode = 9175015 THEN 'Хрунич Алексей'
+    WHEN dcb.CliBrandCode = 970170504 THEN 'Хрунич Алексей'
+    WHEN dcb.CliBrandCode = 9175051 THEN 'Хрунич Алексей'
+    WHEN dcb.CliBrandCode = 9174999 THEN 'Новый'
+    WHEN dcb.CliBrandCode = 970227809 THEN 'Новый'
+    ELSE 'Неизвестно' 
+  END AS Ответственный
+    FROM DataPrime.RolesCliAmongObj rcao
+    LEFT JOIN descclibrand dcb ON dcb.CliCode = rcao.CliCode
+    WHERE
+        rcao.RoleCode IN ('ГЕНПОДРЯДЧИК', 'СОБСТВЕННИК')
+    AND dcb.CliBrandCode IN ( 
+        330212941, 330212711, 9175014, 55122747, 87216898, 330212772, 90215077, 970092413, 9175029, 330212952,
+        90122844, 9175013, 9175019, 55049852, 330212997, 9175016, 90052035, 90053248, 90053228, 9175126,
+        9103535, 330212554, 9217111, 440165466, 9175015, 970170504, 9175051, 9174999, 970227809, 330210304,
+        9175066, 9175123, 9175148, 9211646, 9175026, 9175140, 440151344, 9175045, 9175130, 9175143,
+        440165970, 9175035, 330213110, 440156592, 440165980, 440167754, 440168123, 1444464, 23015952, 440150999,
+        440166439, 440166457, 60190841, 87241955, 9175064, 9175115, 330212766, 440157518, 440167256, 90070142,
+        9175011, 9175052, 9175070, 9175107, 9151081, 9175023, 9175114)),
+  RoleRespObj AS (SELECT 
+    rcao.ObjCode,
+    dcb.CliBrandCode,
+    dcb.CliBrandName,
+    CASE 
+        WHEN dcb.CliBrandCode = 330212941 THEN 'Борисов Николай'
+        WHEN dcb.CliBrandCode = 330212711 THEN 'Борисов Николай'
+        WHEN dcb.CliBrandCode = 9175014 THEN 'Борисов Николай'
+        WHEN dcb.CliBrandCode = 55122747 THEN 'Николаева Ольга'
+        WHEN dcb.CliBrandCode = 87216898 THEN 'Силаева Наталья'
+        WHEN dcb.CliBrandCode = 330212772 THEN 'Силаева Наталья'
+        WHEN dcb.CliBrandCode = 90215077 THEN 'Кухтина Татьяна'
+        WHEN dcb.CliBrandCode = 970092413 THEN 'Кухтина Татьяна'
+        WHEN dcb.CliBrandCode = 9175029 THEN 'Ольховик Елена'
+        WHEN dcb.CliBrandCode = 330212952 THEN 'Ольховик Елена'
+        WHEN dcb.CliBrandCode = 90122844 THEN 'Ольховик Елена'
+        WHEN dcb.CliBrandCode = 9175013 THEN 'Басуева Людмила'
+        WHEN dcb.CliBrandCode = 9175019 THEN 'Басуева Людмила'
+        WHEN dcb.CliBrandCode = 55049852 THEN 'Басуева Людмила'
+        WHEN dcb.CliBrandCode = 330212997 THEN 'Гусева Татьяна'
+        WHEN dcb.CliBrandCode = 9175016 THEN 'Гусева Татьяна'
+        WHEN dcb.CliBrandCode = 90052035 THEN 'Сурова Ирина'
+        WHEN dcb.CliBrandCode = 90053248 THEN 'Сурова Ирина'
+        WHEN dcb.CliBrandCode = 90053228 THEN 'Сурова Ирина'
+        WHEN dcb.CliBrandCode = 9175126 THEN 'Сурова Ирина'
+        WHEN dcb.CliBrandCode = 9103535 THEN 'Петров Александр'
+        WHEN dcb.CliBrandCode = 330212554 THEN 'Петров Александр'
+        WHEN dcb.CliBrandCode = 9217111 THEN 'Петров Александр'
+        WHEN dcb.CliBrandCode = 440165466 THEN 'Хрунич Алексей'
+        WHEN dcb.CliBrandCode = 9175015 THEN 'Хрунич Алексей'
+        WHEN dcb.CliBrandCode = 970170504 THEN 'Хрунич Алексей'
+        WHEN dcb.CliBrandCode = 9175051 THEN 'Хрунич Алексей'
+        WHEN dcb.CliBrandCode = 9174999 THEN 'Новый'
+        WHEN dcb.CliBrandCode = 970227809 THEN 'Новый'
+        ELSE 'Неизвестно'
+    END AS Ответственный
+FROM DataPrime.RolesCliAmongObj rcao
+LEFT JOIN descclibrand dcb ON dcb.CliCode = rcao.CliCode
+LEFT JOIN DataPrime.ObjDesc od ON rcao.ObjCode = od.ObjCode
+WHERE 
+    rcao.RoleCode IN ('ГЕНПОДРЯДЧИК', 'СОБСТВЕННИК')
+    AND dcb.CliBrandCode IN (
+        330212941, 330212711, 9175014, 55122747, 87216898, 330212772, 90215077, 970092413, 9175029, 330212952,
+        90122844, 9175013, 9175019, 55049852, 330212997, 9175016, 90052035, 90053248, 90053228, 9175126,
+        9103535, 330212554, 9217111, 440165466, 9175015, 970170504, 9175051, 9174999, 970227809, 330210304,
+        9175066, 9175123, 9175148, 9211646, 9175026, 9175140, 440151344, 9175045, 9175130, 9175143,
+        440165970, 9175035, 330213110, 440156592, 440165980, 440167754, 440168123, 1444464, 23015952, 440150999,
+        440166439, 440166457, 60190841, 87241955, 9175064, 9175115, 330212766, 440157518, 440167256, 90070142,
+        9175011, 9175052, 9175070, 9175107, 9151081, 9175023, 9175114
+    )),
+  SaledSumClient2025_Q1 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_1КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-01-01' AND ctdf.DataInfo <= '2025-03-31'
+    GROUP BY  ctdf.CliCode),
+  SaledSumClientObject2025_Q1 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_1КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-01-01' AND ctdf.DataInfo <= '2025-03-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  SaledSumClient2025_Q2 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_2КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-04-01' AND ctdf.DataInfo <= '2025-06-30'
+    GROUP BY  ctdf.CliCode),
+   SaledSumClientObject2025_Q2 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_2КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-04-01' AND ctdf.DataInfo <= '2025-06-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+   SaledSumClient2025_Q3 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_3КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-07-01' AND ctdf.DataInfo <= '2025-09-30'
+    GROUP BY  ctdf.CliCode),
+   SaledSumClientObject2025_Q3 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_3КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-07-01' AND ctdf.DataInfo <= '2025-09-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+    SaledSumClient2025_Q4 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_4КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-10-01' AND ctdf.DataInfo <= '2025-12-31'
+    GROUP BY  ctdf.CliCode),
+   SaledSumClientObject2025_Q4 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_4КВ_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-10-01' AND ctdf.DataInfo <= '2025-12-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+    SaledSumClient2024_Q1 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_1КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-01-01' AND ctdf.DataInfo <= '2024-03-31'
+    GROUP BY  ctdf.CliCode),
+  SaledSumClientObject2024_Q1 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_1КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-01-01' AND ctdf.DataInfo <= '2024-03-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  SaledSumClient2024_Q2 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_2КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-04-01' AND ctdf.DataInfo <= '2024-06-30'
+    GROUP BY  ctdf.CliCode),
+   SaledSumClientObject2024_Q2 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_2КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-04-01' AND ctdf.DataInfo <= '2024-06-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+   SaledSumClient2024_Q3 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_3КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-07-01' AND ctdf.DataInfo <= '2024-09-30'
+    GROUP BY  ctdf.CliCode),
+   SaledSumClientObject2024_Q3 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_3КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-07-01' AND ctdf.DataInfo <= '2024-09-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+    SaledSumClient2024_Q4 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_4КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-10-01' AND ctdf.DataInfo <= '2024-12-31'
+    GROUP BY  ctdf.CliCode),
+   SaledSumClientObject2024_Q4 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_4КВ_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-10-01' AND ctdf.DataInfo <= '2024-12-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  SaledSumClient2026_Q1 AS (
+   SELECT
+        ctdf.CliCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_1КВ_2026
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2026-01-01' AND ctdf.DataInfo <= '2026-03-31'
+    GROUP BY  ctdf.CliCode),
+  SaledSumClientObject2026_Q1 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled),2) AS ГО_по_клиенту_на_объекте_1КВ_2026
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2026-01-01' AND ctdf.DataInfo <= '2026-03-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  SaledSum_O_Client2025_Q1 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_1КВ_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-01-01' AND o.DataInfo <= '2025-03-31'
+    GROUP BY  o.CliCode),
+  SaledSum_O_Client2025_Q2 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_2КВ_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-04-01' AND o.DataInfo <= '2025-06-30'
+    GROUP BY  o.CliCode),
+   SaledSum_O_Client2025_Q3 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_3КВ_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-07-01' AND o.DataInfo <= '2025-09-30'
+    GROUP BY  o.CliCode),
+    SaledSum_O_Client2025_Q4 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_4КВ_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-10-01' AND o.DataInfo <= '2025-12-31'
+    GROUP BY  o.CliCode),
+    SaledSum_O_Client2024_Q1 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_1КВ_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-01-01' AND o.DataInfo <= '2024-03-31'
+    GROUP BY  o.CliCode),
+  SaledSum_O_Client2024_Q2 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_2КВ_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-04-01' AND o.DataInfo <= '2024-06-30'
+    GROUP BY  o.CliCode),
+   SaledSum_O_Client2024_Q3 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_3КВ_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-07-01' AND o.DataInfo <= '2024-09-30'
+    GROUP BY  o.CliCode),
+    SaledSum_O_Client2024_Q4 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_4КВ_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-10-01' AND o.DataInfo <= '2024-12-31'
+    GROUP BY  o.CliCode),
+  SaledSum_O_Client2026_Q1 AS (
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled),2) AS ТО_по_клиенту_1КВ_2026
+    FROM Ot o
+    WHERE o.DataInfo >= '2026-01-01' AND o.DataInfo <= '2026-03-31'
+    GROUP BY  o.CliCode),
+  RTN_ClientObject2025_Q1 AS ( 
+   SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4) AS РТН_ГО_Объект_Клиент_Q1_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-01-01' AND ctdf.DataInfo <= '2025-03-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2025_Q2 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+       ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q2_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-04-01' AND ctdf.DataInfo <= '2025-06-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2025_Q3 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q3_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-07-01' AND ctdf.DataInfo <= '2025-09-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+   RTN_ClientObject2025_Q4 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q4_2025
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2025-10-01' AND ctdf.DataInfo <= '2025-12-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2024_Q1 AS ( 
+   SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q1_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-01-01' AND ctdf.DataInfo <= '2024-03-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2024_Q2 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q2_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-04-01' AND ctdf.DataInfo <= '2024-06-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2024_Q3 AS ( 
+    SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q3_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-07-01' AND ctdf.DataInfo <= '2024-09-30'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2024_Q4 AS ( 
+   SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q4_2024
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-10-01' AND ctdf.DataInfo <= '2024-12-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+  RTN_ClientObject2026_Q1 AS ( 
+   SELECT
+        ctdf.CliCode,
+        ctdf.ObjCode,
+       ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRB), 4)  AS РТН_ГО_Объект_Клиент_Q1_2026
+    FROM DataPrime.CliTurnoverDtl_Fin ctdf
+    WHERE ctdf.DataInfo >= '2024-01-01' AND ctdf.DataInfo <= '2024-03-31'
+    GROUP BY  ctdf.CliCode,ctdf.ObjCode),
+RTN_O_ClientObject2025_Q1 AS ( 
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4)  AS РТН_ТО_Клиент_Q1_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-01-01' AND o.DataInfo <= '2025-03-31'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2025_Q2 AS ( 
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q2_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-04-01' AND o.DataInfo <= '2025-06-30'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2025_Q3 AS ( 
+    SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q3_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-07-01' AND o.DataInfo <= '2025-09-30'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2025_Q4 AS ( 
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q4_2025
+    FROM Ot o
+    WHERE o.DataInfo >= '2025-10-01' AND o.DataInfo <= '2025-12-31'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2024_Q1 AS ( 
+   SELECT
+        o.CliCode,
+       ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q1_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-01-01' AND o.DataInfo <= '2024-03-31'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2024_Q2 AS ( 
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q2_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-04-01' AND o.DataInfo <= '2024-06-30'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2024_Q3 AS ( 
+    SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q3_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-07-01' AND o.DataInfo <= '2024-09-30'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2024_Q4 AS ( 
+   SELECT
+        o.CliCode,
+       ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) AS РТН_ТО_Клиент_Q4_2024
+    FROM Ot o
+    WHERE o.DataInfo >= '2024-10-01' AND o.DataInfo <= '2024-12-31'
+    GROUP BY  o.CliCode),
+  RTN_O_ClientObject2026_Q1 AS ( 
+   SELECT
+        o.CliCode,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRB), 4) РТН_ТО_Клиент_Q1_2026
+    FROM Ot o
+    WHERE o.DataInfo >= '2026-01-01' AND o.DataInfo <= '2026-03-31'
+    GROUP BY  o.CliCode)
+SELECT 
+    rp.ObjCode AS Код_Объекта,
+    rp.CliCode AS Контрагент,
+    rp.CliBrandCode AS Код_Бренда,
+    rp.CliBrandName AS Имя_Бренда,
+    rp.RoleCode AS Роль,
+    rp.Застройщик AS Застройщик,
+    rrb.Ответственный AS Ответственный_за_Бренд,
+    rro.Ответственный AS Ответственный_за_Объект,
+    rp.Имя_Застройщик,
+    rp.Имя_ГенПодрядчик,
+    rp.Ответственный_За_Застройщика,
+    rp.ObjName AS Имя_Объекта,
+    sscq51.ГО_по_клиенту_1КВ_2025,
+    sscoq51.ГО_по_клиенту_на_объекте_1КВ_2025,
+    sscq52.ГО_по_клиенту_2КВ_2025,
+    sscoq52.ГО_по_клиенту_на_объекте_2КВ_2025,
+    sscq53.ГО_по_клиенту_3КВ_2025,
+    sscoq53.ГО_по_клиенту_на_объекте_3КВ_2025,
+    sscq54.ГО_по_клиенту_4КВ_2025,
+    sscoq54.ГО_по_клиенту_на_объекте_4КВ_2025,
+    sscq41.ГО_по_клиенту_1КВ_2024,
+    sscoq41.ГО_по_клиенту_на_объекте_1КВ_2024,
+    sscq42.ГО_по_клиенту_2КВ_2024,
+    sscoq42.ГО_по_клиенту_на_объекте_2КВ_2024,
+    sscq43.ГО_по_клиенту_3КВ_2024,
+    sscoq43.ГО_по_клиенту_на_объекте_3КВ_2024,
+    sscq44.ГО_по_клиенту_4КВ_2024,
+    sscoq44.ГО_по_клиенту_на_объекте_4КВ_2024,
+    sscq61.ГО_по_клиенту_1КВ_2026,
+    sscoq61.ГО_по_клиенту_на_объекте_1КВ_2026,
+    ssocq51.ТО_по_клиенту_1КВ_2025,
+    ssocq52.ТО_по_клиенту_2КВ_2025,
+    ssocq53.ТО_по_клиенту_3КВ_2025,
+    ssocq54.ТО_по_клиенту_4КВ_2025,
+    ssocq41.ТО_по_клиенту_1КВ_2024,
+    ssocq42.ТО_по_клиенту_2КВ_2024,
+    ssocq43.ТО_по_клиенту_3КВ_2024,
+    ssocq44.ТО_по_клиенту_4КВ_2024,
+    ssocq61.ТО_по_клиенту_1КВ_2026,
+    rtncoq61.РТН_ГО_Объект_Клиент_Q1_2026,
+    rtncoq41.РТН_ГО_Объект_Клиент_Q1_2024,
+    rtncoq42.РТН_ГО_Объект_Клиент_Q2_2024,
+    rtncoq43.РТН_ГО_Объект_Клиент_Q3_2024,
+    rtncoq44.РТН_ГО_Объект_Клиент_Q4_2024,
+    rtncoq51.РТН_ГО_Объект_Клиент_Q1_2025,
+    rtncoq52.РТН_ГО_Объект_Клиент_Q2_2025,
+    rtncoq53.РТН_ГО_Объект_Клиент_Q3_2025,
+    rtncoq54.РТН_ГО_Объект_Клиент_Q4_2025,
+    rtnocoq61.РТН_ТО_Клиент_Q1_2026,
+    rtnocoq41.РТН_ТО_Клиент_Q1_2024,
+    rtnocoq42.РТН_ТО_Клиент_Q2_2024,
+    rtnocoq43.РТН_ТО_Клиент_Q3_2024,
+    rtnocoq44.РТН_ТО_Клиент_Q4_2024,
+    rtnocoq51.РТН_ТО_Клиент_Q1_2025,
+    rtnocoq52.РТН_ТО_Клиент_Q2_2025,
+    rtnocoq53.РТН_ТО_Клиент_Q3_2025,
+    rtnocoq54.РТН_ТО_Клиент_Q4_2025
+FROM CommonTable rp
+LEFT JOIN FilteredObjects fo ON fo.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2025_Q2 sscq52 ON sscq52.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2025_Q2 sscoq52 ON sscoq52.CliCode = rp.CliCode AND sscoq52.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2025_Q1 sscq51 ON sscq51.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2025_Q1 sscoq51 ON sscoq51.CliCode = rp.CliCode AND sscoq51.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2025_Q3 sscq53 ON sscq53.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2025_Q3 sscoq53 ON sscoq53.CliCode = rp.CliCode AND sscoq53.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2025_Q4 sscq54 ON sscq54.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2025_Q4 sscoq54 ON sscoq54.CliCode = rp.CliCode AND sscoq54.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2024_Q2 sscq42 ON sscq42.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2024_Q2 sscoq42 ON sscoq42.CliCode = rp.CliCode AND sscoq42.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2024_Q1 sscq41 ON sscq41.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2024_Q1 sscoq41 ON sscoq41.CliCode = rp.CliCode AND sscoq41.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2024_Q3 sscq43 ON sscq43.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2024_Q3 sscoq43 ON sscoq43.CliCode = rp.CliCode AND sscoq43.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2024_Q4 sscq44 ON sscq44.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2024_Q4 sscoq44 ON sscoq44.CliCode = rp.CliCode AND sscoq44.ObjCode = rp.ObjCode
+LEFT JOIN SaledSumClient2026_Q1 sscq61 ON sscq61.CliCode = rp.CliCode 
+LEFT JOIN SaledSumClientObject2026_Q1 sscoq61 ON sscoq61.CliCode = rp.CliCode AND sscoq61.ObjCode = rp.ObjCode
+LEFT JOIN SaledSum_O_Client2025_Q2 ssocq52 ON ssocq52.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2025_Q1 ssocq51 ON ssocq51.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2025_Q3 ssocq53 ON ssocq53.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2025_Q4 ssocq54 ON ssocq54.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2024_Q2 ssocq42 ON ssocq42.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2024_Q1 ssocq41 ON ssocq41.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2024_Q3 ssocq43 ON ssocq43.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2024_Q4 ssocq44 ON ssocq44.CliCode = rp.CliCode 
+LEFT JOIN SaledSum_O_Client2026_Q1 ssocq61 ON ssocq61.CliCode = rp.CliCode 
+LEFT JOIN RTN_ClientObject2026_Q1 rtncoq61 ON rtncoq61.CliCode = rp.CliCode AND rtncoq61.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2024_Q1 rtncoq41 ON rtncoq41.CliCode = rp.CliCode AND rtncoq41.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2024_Q2 rtncoq42 ON rtncoq42.CliCode = rp.CliCode AND rtncoq42.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2024_Q3 rtncoq43 ON rtncoq43.CliCode = rp.CliCode AND rtncoq43.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2024_Q4 rtncoq44 ON rtncoq44.CliCode = rp.CliCode AND rtncoq44.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2025_Q1 rtncoq51 ON rtncoq51.CliCode = rp.CliCode AND rtncoq51.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2025_Q2 rtncoq52 ON rtncoq52.CliCode = rp.CliCode AND rtncoq52.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2025_Q3 rtncoq53 ON rtncoq53.CliCode = rp.CliCode AND rtncoq53.ObjCode = rp.ObjCode
+LEFT JOIN RTN_ClientObject2025_Q4 rtncoq54 ON rtncoq54.CliCode = rp.CliCode AND rtncoq54.ObjCode = rp.ObjCode
+LEFT JOIN RTN_O_ClientObject2026_Q1 rtnocoq61 ON rtnocoq61.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2024_Q1 rtnocoq41 ON rtnocoq41.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2024_Q2 rtnocoq42 ON rtnocoq42.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2024_Q3 rtnocoq43 ON rtnocoq43.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2024_Q4 rtnocoq44 ON rtnocoq44.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2025_Q1 rtnocoq51 ON rtnocoq51.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2025_Q2 rtnocoq52 ON rtnocoq52.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2025_Q3 rtnocoq53 ON rtnocoq53.CliCode = rp.CliCode 
+LEFT JOIN RTN_O_ClientObject2025_Q4 rtnocoq54 ON rtnocoq54.CliCode = rp.CliCode 
+LEFT JOIN RoleRespBrand rrb ON rrb.CliBrandCode = rp.CliBrandCode
+LEFT JOIN RoleRespObj rro ON rro.CliBrandCode = rp.CliBrandCode AND rro.ObjCode = rp.ObjCode
+WHERE rp.rn = 1
+GROUP BY 
+    rp.ObjCode,
+    rp.CliCode,
+    rp.CliBrandCode,
+    rp.CliBrandName,
+    rp.RoleCode,
+    rp.ObjName,
+    rp.Застройщик,
+    rrb.Ответственный,
+    rro.Ответственный,
+    rp.Имя_Застройщик,
+    rp.Имя_ГенПодрядчик,
+    rp.Ответственный_За_Застройщика,
+    ГО_по_клиенту_1КВ_2025,
+    ГО_по_клиенту_на_объекте_1КВ_2025,
+    ГО_по_клиенту_2КВ_2025,
+    ГО_по_клиенту_на_объекте_2КВ_2025,
+    ГО_по_клиенту_3КВ_2025,
+    ГО_по_клиенту_на_объекте_3КВ_2025,
+    ГО_по_клиенту_4КВ_2025,
+    ГО_по_клиенту_на_объекте_4КВ_2025,
+    ГО_по_клиенту_1КВ_2024,
+    ГО_по_клиенту_на_объекте_1КВ_2024,
+    ГО_по_клиенту_2КВ_2024,
+    ГО_по_клиенту_на_объекте_2КВ_2024,
+    ГО_по_клиенту_3КВ_2024,
+    ГО_по_клиенту_на_объекте_3КВ_2024,
+    ГО_по_клиенту_4КВ_2024,
+    ГО_по_клиенту_на_объекте_4КВ_2024,
+    ГО_по_клиенту_1КВ_2026,
+    ГО_по_клиенту_на_объекте_1КВ_2026,
+    ТО_по_клиенту_1КВ_2025,
+    ТО_по_клиенту_2КВ_2025,
+    ТО_по_клиенту_3КВ_2025,
+    ТО_по_клиенту_4КВ_2025,
+    ТО_по_клиенту_1КВ_2024,
+    ТО_по_клиенту_2КВ_2024,
+    ТО_по_клиенту_3КВ_2024,
+    ТО_по_клиенту_4КВ_2024,
+    ТО_по_клиенту_1КВ_2026,
+    РТН_ГО_Объект_Клиент_Q1_2026,
+    РТН_ГО_Объект_Клиент_Q1_2024,
+    РТН_ГО_Объект_Клиент_Q2_2024,
+    РТН_ГО_Объект_Клиент_Q3_2024,
+    РТН_ГО_Объект_Клиент_Q4_2024,
+    РТН_ГО_Объект_Клиент_Q1_2025,
+    РТН_ГО_Объект_Клиент_Q2_2025,
+    РТН_ГО_Объект_Клиент_Q3_2025,
+    РТН_ГО_Объект_Клиент_Q4_2025,
+    РТН_ТО_Клиент_Q1_2026,
+    РТН_ТО_Клиент_Q1_2024,
+    РТН_ТО_Клиент_Q2_2024,
+    РТН_ТО_Клиент_Q3_2024,
+    РТН_ТО_Клиент_Q4_2024,
+    РТН_ТО_Клиент_Q1_2025,
+    РТН_ТО_Клиент_Q2_2025,
+    РТН_ТО_Клиент_Q3_2025,
+    РТН_ТО_Клиент_Q4_2025
+ORDER BY Код_Объекта,Контрагент
