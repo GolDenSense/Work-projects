@@ -1,0 +1,248 @@
+WITH
+fact_data  
+AS (
+    WITH Query1 AS (
+        SELECT 
+            d1.YearID AS Year,
+            d1.MonthID AS Month,
+            d1.SalesChannelID AS Sales_Channel,
+            d1.SalesSubtypeID AS Specialty,
+            Cat2.Name_Level2 AS Campaign,
+            Cat3.Name_Level3 AS Department,
+            Cat1.Name_Level1 AS Product_Direction,
+            Cat1.Name_Level2 AS Product_Dept,
+            LEFT(d1.ClassCode, 5) AS OpCode,
+            ROUND(SUM(d1.SaleAmount), 2) AS Revenue,
+            ROUND(SUM(d1.SaleAmount) - SUM(d1.Cost), 2) AS Margin_81,
+            ROUND(SUM(d1.SaleAmount) - SUM(d1.AccCost), 2) AS Margin_Cost,
+            ROUND(SUM(SUM(d1.SaleAmount)) OVER (PARTITION BY d1.YearID, d1.MonthID), 2) AS Total_Sum_Month_Revenue,
+            ROUND(SUM(SUM(d1.SaleAmount) - SUM(d1.Cost)) OVER (PARTITION BY d1.YearID, d1.MonthID), 2) AS Total_Sum_Month_Margin81,
+            ROUND(SUM(SUM(d1.SaleAmount) - SUM(d1.AccCost)) OVER (PARTITION BY d1.YearID, d1.MonthID), 2) AS Total_Sum_Month_MarginCost,
+            ROUND(SUM(d1.SaleAmount) / LAG(SUM(d1.SaleAmount)) OVER (PARTITION BY 
+                d1.SalesChannelID, 
+                d1.SalesSubtypeID,  
+                Cat2.Name_Level2, 
+                Cat2.Name_Level3,
+                Cat1.Name_Level1,
+                Cat1.Name_Level2,
+                LEFT(d1.ClassCode, 5)
+                ORDER BY d1.YearID, d1.MonthID), 2) AS CR_Revenue,
+            ROUND(SUM(d1.SaleAmount) - SUM(d1.Cost) / LAG(SUM(d1.SaleAmount) - SUM(d1.Cost)) OVER (PARTITION BY 
+                d1.SalesChannelID, 
+                d1.SalesSubtypeID,  
+                Cat2.Name_Level2, 
+                Cat2.Name_Level3,
+                Cat1.Name_Level1,
+                Cat1.Name_Level2,
+                LEFT(d1.ClassCode, 5)
+                ORDER BY d1.YearID, d1.MonthID), 2) AS CR_Margin_81,
+            ROUND(SUM(d1.SaleAmount) - SUM(d1.AccCost) / LAG(SUM(d1.SaleAmount) - SUM(d1.AccCost)) OVER (PARTITION BY 
+                d1.SalesChannelID, 
+                d1.SalesSubtypeID,  
+                Cat2.Name_Level2, 
+                Cat2.Name_Level3,
+                Cat1.Name_Level1,
+                Cat1.Name_Level2,
+                LEFT(d1.ClassCode, 5)
+                ORDER BY d1.YearID, d1.MonthID), 2) AS CR_Margin_Cost
+        FROM 
+            Data_Schema.FactSales d1
+        LEFT JOIN (
+            SELECT  
+                g1.CodeSrc AS CodeSrc,
+                g1.CodeGrp AS CodeGrp
+            FROM GroupMapping g1
+            WHERE 
+                g1.TypeSrc = 37 
+                AND g1.TypeGrp = 63 
+                AND g1.CodeGrp LIKE 'XYZ%'
+        ) AS RulesGroup
+        ON LEFT(d1.ClassCode, 5) = RulesGroup.CodeSrc
+        AND RulesGroup.CodeGrp LIKE 'XYZ%'
+        LEFT JOIN Category2 Cat2 ON RulesGroup.CodeGrp = Cat2.Code
+        LEFT JOIN Category3 Cat3 ON d1.DivisionCode = Cat3.Code
+        LEFT JOIN Category1 Cat1 ON d1.GroupCode = Cat1.Code
+        WHERE 
+            d1.YearID >= 2024 
+            AND d1.MonthID = 8
+            AND LEFT(Cat3.Code, 1) NOT LIKE '6%'
+        GROUP BY 
+            d1.YearID,
+            d1.MonthID,
+            d1.SalesChannelID,
+            d1.SalesSubtypeID,
+            Cat2.Name_Level2,
+            Cat2.Name_Level3,
+            Cat1.Name_Level1,
+            Cat1.Name_Level2,
+            LEFT(d1.ClassCode, 5)
+        ),
+    Query2 AS (
+        SELECT 
+            o.YearID AS Year,
+            o.MonthID AS Month,
+            o.SalesChannelID AS Sales_Channel,
+            o.SalesSubtypeID AS Specialty,
+            Cat2.Name_Level2 AS Campaign,
+            Cat3.Name_Level3 AS Department,
+            Cat1.Name_Level1 AS Product_Direction,
+            Cat1.Name_Level2 AS Product_Dept,
+            LEFT(o.ClassCode, 5) AS OpCode,
+            ROUND(SUM(o.SaleAmount), 2) AS Revenue,
+            ROUND(SUM(o.SaleAmount) - SUM(o.Cost), 2) AS Margin_81,
+            ROUND(SUM(o.SaleAmount) - SUM(o.AccCost), 2) AS Margin_Cost,
+            ROUND(SUM(SUM(o.SaleAmount)) OVER (PARTITION BY o.YearID, o.MonthID), 2) AS Total_Sum_Month_Revenue,
+            ROUND(SUM(SUM(o.SaleAmount) - SUM(o.Cost)) OVER (PARTITION BY o.YearID, o.MonthID), 2) AS Total_Sum_Month_Margin81,
+            ROUND(SUM(SUM(o.SaleAmount) - SUM(o.AccCost)) OVER (PARTITION BY o.YearID, o.MonthID), 2) AS Total_Sum_Month_MarginCost,
+            ROUND(SUM(o.SaleAmount) / LAG(SUM(o.SaleAmount)) OVER (PARTITION BY 
+                o.SalesChannelID, 
+                o.SalesSubtypeID,  
+                Cat2.Name_Level2, 
+                Cat2.Name_Level3,
+                Cat1.Name_Level1,
+                Cat1.Name_Level2,
+                LEFT(o.ClassCode, 5)
+                ORDER BY o.YearID, o.MonthID), 2) AS CR_Revenue,
+            ROUND(SUM(o.SaleAmount) - SUM(o.Cost) / LAG(SUM(o.SaleAmount) - SUM(o.Cost)) OVER (PARTITION BY 
+                o.SalesChannelID, 
+                o.SalesSubtypeID,  
+                Cat2.Name_Level2, 
+                Cat2.Name_Level3,
+                Cat1.Name_Level1,
+                Cat1.Name_Level2,
+                LEFT(o.ClassCode, 5)
+                ORDER BY o.YearID, o.MonthID), 2) AS CR_Margin_81,
+            ROUND(SUM(o.SaleAmount) - SUM(o.AccCost) / LAG(SUM(o.SaleAmount) - SUM(o.AccCost)) OVER (PARTITION BY 
+                o.SalesChannelID, 
+                o.SalesSubtypeID,  
+                Cat2.Name_Level2, 
+                Cat2.Name_Level3,
+                Cat1.Name_Level1,
+                Cat1.Name_Level2,
+                LEFT(o.ClassCode, 5)
+                ORDER BY o.YearID, o.MonthID), 2) AS CR_Margin_Cost
+        FROM 
+            Data_Other.OtTable o
+        LEFT JOIN (
+            SELECT  
+                g1.CodeSrc AS CodeSrc,
+                g1.CodeGrp AS CodeGrp
+            FROM GroupMapping g1
+            WHERE 
+                g1.TypeSrc = 37 
+                AND g1.TypeGrp = 63 
+                AND g1.CodeGrp LIKE 'XYZ%'
+        ) AS RulesGroup
+        ON LEFT(o.ClassCode, 5) = RulesGroup.CodeSrc
+        AND RulesGroup.CodeGrp LIKE 'XYZ%'
+        LEFT JOIN Category2 Cat2 ON RulesGroup.CodeGrp = Cat2.Code
+        LEFT JOIN Category3 Cat3 ON o.DivisionCode = Cat3.Code
+        LEFT JOIN Category1 Cat1 ON o.GroupCode = Cat1.Code
+        WHERE 
+            o.YearID >= 2024 
+            AND o.MonthID = 8
+            AND LEFT(Cat3.Code, 1) NOT LIKE '6%'
+        GROUP BY 
+            o.YearID,
+            o.MonthID,
+            o.SalesChannelID,
+            o.SalesSubtypeID,
+            Cat2.Name_Level2,
+            Cat2.Name_Level3,
+            Cat1.Name_Level1,
+            Cat1.Name_Level2,
+            LEFT(o.ClassCode, 5)
+        )
+    SELECT 
+        COALESCE(q1.Year, q2.Year) AS Year,
+        COALESCE(q1.Month, q2.Month) AS Month,
+        COALESCE(q1.Sales_Channel, q2.Sales_Channel) AS Sales_Channel,
+        COALESCE(q1.Specialty, q2.Specialty) AS Specialty,
+        COALESCE(q1.Campaign, q2.Campaign) AS Campaign,
+        COALESCE(q1.Department, q2.Department) AS Department,
+        COALESCE(q1.Product_Direction, q2.Product_Direction) AS Product_Direction,
+        COALESCE(q1.Product_Dept, q2.Product_Dept) AS Product_Dept,
+        COALESCE(q1.OpCode, q2.OpCode) AS OpCode,
+        q1.Revenue AS Revenue_Fact,
+        q1.Margin_81 AS Margin_81_Fact,
+        q1.Margin_Cost AS Margin_Cost_Fact,
+        q1.Total_Sum_Month_Revenue AS Total_Month_Revenue_Fact,
+        q1.Total_Sum_Month_Margin81 AS Total_Month_Margin81_Fact,
+        q1.Total_Sum_Month_MarginCost AS Total_Month_MarginCost_Fact,
+        q1.CR_Revenue AS CR_Revenue_Fact,
+        q1.CR_Margin_81 AS CR_Margin_81_Fact,
+        q1.CR_Margin_Cost AS CR_Margin_Cost_Fact,
+        q2.Revenue AS Revenue_Plan,
+        q2.Margin_81 AS Margin_81_Plan,
+        q2.Margin_Cost AS Margin_Cost_Plan,
+        q2.Total_Sum_Month_Revenue AS Total_Month_Revenue_Plan,
+        q2.Total_Sum_Month_Margin81 AS Total_Month_Margin81_Plan,
+        q2.Total_Sum_Month_MarginCost AS Total_Month_MarginCost_Plan,
+        q2.CR_Revenue AS CR_Revenue_Plan,
+        q2.CR_Margin_81 AS CR_Margin_81_Plan,
+        q2.CR_Margin_Cost AS CR_Margin_Cost_Plan
+    FROM fact_data tf
+    FULL JOIN plan_data pd 
+        ON tf.Year = pd.Year
+        AND tf.Month = pd.Month
+        AND tf.Sales_Channel = pd.Sales_Channel
+        AND tf.Sales_Subtype = pd.Sales_Subtype
+        AND tf.Campaign = pd.Campaign
+        AND tf.Department = pd.Department
+        AND tf.Product_Direction = pd.Product_Direction
+        AND tf.Product_Dept = pd.Product_Dept
+        AND tf.OpCode = pd.OpCode
+    WHERE COALESCE(tf.Year, pd.Year) >= 2024 
+      AND COALESCE(tf.Month, pd.Month) = 8
+),
+final_result AS (
+    SELECT
+        COALESCE(f1.Year, f2.Year) AS Year,
+        COALESCE(f1.Month, f2.Month) AS Month,
+        COALESCE(f1.Sales_Channel, f2.Sales_Channel) AS Sales_Channel,
+        COALESCE(f1.Specialty, f2.Specialty) AS Specialty,
+        COALESCE(f1.Campaign, f2.Campaign) AS Campaign,
+        COALESCE(f1.Department, f2.Department) AS Department,
+        COALESCE(f1.Product_Direction, f2.Product_Direction) AS Product_Direction,
+        COALESCE(f1.Product_Dept, f2.Product_Dept) AS Product_Dept,
+        COALESCE(f1.OpCode, f2.OpCode) AS OpCode,
+        f2.Plan_Revenue AS Plan_Revenue,
+        f1.Fact_Revenue AS Fact_Revenue,
+        f2.Plan_Margin81 AS Plan_Margin81,
+        f1.Margin_81 AS Fact_Margin81,
+        f2.Plan_MarginCost AS Plan_MarginCost,
+        f1.Margin_Cost AS Fact_MarginCost,
+        ROUND((f1.Fact_Revenue / f2.Plan_Revenue) * 100, 2) AS Variance_Revenue_Percent,
+        ROUND((f1.Margin_81 / f2.Plan_Margin81) * 100, 2) AS Variance_Margin81_Percent,
+        ROUND((f1.Margin_Cost / f2.Plan_MarginCost) * 100, 2) AS Variance_MarginCost_Percent,
+        f1.Total_Month_Margin81 AS Total_Month_Margin81_Fact,
+        f1.Campaign AS Campaign_Fact,
+        f1.Total_Month_MarginCost AS Total_Month_MarginCost_Fact,
+        f2.Plan_Revenue AS Revenue_Plan,
+        f2.Plan_Margin81 AS Margin81_Plan,
+        f2.Plan_MarginCost AS MarginCost_Plan,
+        f2.Total_Month_Revenue AS Total_Month_Revenue_Plan,
+        f2.Total_Month_Margin81 AS Total_Month_Margin81_Plan,
+        f2.Total_Month_MarginCost AS Total_Month_MarginCost_Plan,
+        f2.Campaign AS Campaign_Plan,
+        f2.Campaign AS Campaign_Plan_Variance,
+        f2.Campaign AS Campaign_Plan_Variance2
+    FROM final_data f1
+    FULL JOIN final_plan f2 ON 
+        f1.Year = f2.Year
+        AND f1.Month = f2.Month
+        AND f1.Sales_Channel = f2.Sales_Channel
+        AND f1.Specialty = f2.Specialty
+        AND f1.Campaign = f2.Campaign
+        AND f1.Department = f2.Department
+        AND f1.Product_Direction = f2.Product_Direction
+        AND f1.Product_Dept = f2.Product_Dept
+        AND f1.OpCode = f2.OpCode
+    WHERE COALESCE(f1.Year, f2.Year) >= 2024
+      AND COALESCE(f1.Month, f2.Month) = 8
+)
+SELECT
+    -- ИТОГОВЫЙ вывод по итогам
+    * -- Можно оставить или указать конкретные поля
+FROM final_result
+ORDER BY Sales_Channel, Campaign, OpCode;
