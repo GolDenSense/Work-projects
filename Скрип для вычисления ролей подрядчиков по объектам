@@ -1,0 +1,398 @@
+WITH MaskedObjectCodes AS (
+    SELECT 
+        t1.ObjCode
+    FROM DataTable1.RoleObjectMapping t1
+    LEFT JOIN DescriptionTable d ON d.Code = t1.ClientCode
+    WHERE
+        t1.Role IN ('ROLE_A', 'ROLE_B')
+    AND d.BrandCode IN ( 
+        123456789, 987654321, 112233445, 556677889, 998877665, 443322110, 667788990, 102938475, 564738291, 019283746,
+        111222333, 444555666, 777888999, 101112131, 141516171, 181920212, 222324252, 262728293, 303132333, 343536373,
+        383940414, 454647484, 494847464, 505152535, 565758595, 606162636, 646566676, 707172737, 747576777, 787980818,
+        858687888, 909192939, 949596979, 999100101, 102103104, 105106107, 108109110, 111112113, 114115116, 117118119,
+        120121122, 123124125, 126127128, 129130131, 132133134, 135136137, 138139140, 141142143, 144145146, 147148149,
+        150151152, 153154155, 156157158, 159160161, 162163164, 165166167, 168169170, 171172173, 174175176, 177178179
+    )
+),
+DistinctObjects AS (
+    SELECT DISTINCT ObjCode
+    FROM MaskedObjectCodes
+),
+RolePriority AS (
+    SELECT 
+        t1.ObjCode,
+        t1.ClientCode,
+        d.BrandCode,
+        d.BrandName,
+        t1.Role,
+        CASE WHEN t1.Role IN ('ROLE_B', 'ROLE_C') THEN d.BrandName ELSE NULL END AS ResponsiblePerson,
+        o.ObjName,
+        CASE
+            WHEN t1.Role IN ('ROLE_B', 'ROLE_C') THEN 1
+            WHEN t1.Role = 'ROLE_A' THEN 2
+            WHEN t1.Role = 'ROLE_D' THEN 3
+            WHEN t1.Role = 'ROLE_E' THEN 4
+            WHEN t1.Role = 'ROLE_F' THEN 5
+            WHEN t1.Role = 'ROLE_G' THEN 6
+            WHEN t1.Role = 'ROLE_H' THEN 7
+            WHEN t1.Role = 'ROLE_I' THEN 8
+            ELSE 9
+        END AS Priority,
+        ROW_NUMBER() OVER (
+            PARTITION BY t1.ClientCode, t1.ObjCode
+            ORDER BY 
+                CASE
+                     WHEN t1.Role IN ('ROLE_B', 'ROLE_C') THEN 1
+                     WHEN t1.Role = 'ROLE_A' THEN 2
+                     WHEN t1.Role = 'ROLE_D' THEN 3
+                     WHEN t1.Role = 'ROLE_E' THEN 4
+                     WHEN t1.Role = 'ROLE_F' THEN 5
+                     WHEN t1.Role = 'ROLE_G' THEN 6
+                     WHEN t1.Role = 'ROLE_H' THEN 7
+                     WHEN t1.Role = 'ROLE_I' THEN 8
+                    ELSE 9
+                END
+        ) AS rn
+    FROM DataTable1.RoleObjectMapping t1
+    LEFT JOIN DescriptionTable d ON d.Code = t1.ClientCode
+    LEFT JOIN DataTable2.ObjectDesc o ON t1.ObjCode = o.ObjCode
+    WHERE t1.ObjCode IN (SELECT ObjCode FROM DistinctObjects)
+),
+ResponsiblePersons AS (
+    SELECT DISTINCT
+        d.BrandCode,
+        CASE 
+            WHEN d.BrandCode = 123456787789 THEN 'Person 1'
+            WHEN d.BrandCode = 98765432190 THEN 'Person 1'
+            WHEN d.BrandCode = 11223344509 THEN 'Person 1'
+            WHEN d.BrandCode = 55667788998 THEN 'Person 2'
+            WHEN d.BrandCode = 99887766587 THEN 'Person 3'
+            WHEN d.BrandCode = 443322117680 THEN 'Person 3'
+            WHEN d.BrandCode = 6677889996790 THEN 'Person 4'
+            WHEN d.BrandCode = 10293847677685 THEN 'Person 4'
+            WHEN d.BrandCode = 564738297681 THEN 'Person 4'
+            WHEN d.BrandCode = 019283746678 THEN 'Person 4'
+            WHEN d.BrandCode = 111222333678 THEN 'Person 5'
+            WHEN d.BrandCode = 444555666678 THEN 'Person 5'
+            WHEN d.BrandCode = 7778889999679 THEN 'Person 5'
+            WHEN d.BrandCode = 101112131067 THEN 'Person 6'
+            WHEN d.BrandCode = 14151617145 THEN 'Person 6'
+            WHEN d.BrandCode = 181920212345 THEN 'Person 6'
+            WHEN d.BrandCode = 2223242527689 THEN 'Person 6'
+            WHEN d.BrandCode = 262728293876 THEN 'Person 6'
+            WHEN d.BrandCode = 30313233367967 THEN 'Person 7'
+            WHEN d.BrandCode = 3435363734345 THEN 'Person 7'
+            WHEN d.BrandCode = 3839404148658 THEN 'Person 7'
+            WHEN d.BrandCode = 4546474843673 THEN 'Person 8'
+            WHEN d.BrandCode = 494847464568 THEN 'Person 8'
+            WHEN d.BrandCode = 505152535964 THEN 'Person 8'
+            WHEN d.BrandCode = 5657585953456 THEN 'Person 8'
+            WHEN d.BrandCode = 60616263634 THEN 'Person 9'
+            WHEN d.BrandCode = 646566676865 THEN 'Person 9'
+            WHEN d.BrandCode = 70717273798 THEN 'Person 10'
+            WHEN d.BrandCode = 74757677780 THEN 'Person 10'
+            WHEN d.BrandCode = 78798081843 THEN 'Person 10'
+            WHEN d.BrandCode = 85868788865 THEN 'Person 11'
+            WHEN d.BrandCode = 90919293986 THEN 'Person 12'
+            WHEN d.BrandCode = 94959697934 THEN 'Person 13'
+            WHEN d.BrandCode = 99910010871 THEN 'Person 14'
+            ELSE 'Unknown'
+        END AS ResponsiblePersonName
+    FROM DataTable1.RoleObjectMapping t1
+    LEFT JOIN DescriptionTable d ON d.Code = t1.ClientCode
+    WHERE
+        t1.Role IN ('ROLE_A', 'ROLE_B')
+    AND d.BrandCode IN (
+        123456789, 987654321, 112233445, 556677889, 998877665, 443322110, 667788990, 102938475, 564738291, 019283746,
+        111222333, 444555666, 777888999, 101112131, 141516171, 181920212, 222324252, 262728293, 303132333, 343536373,
+        383940414, 454647484, 494847464, 505152535, 565758595, 606162636, 646566676, 707172737, 747576777, 787980818,
+        858687888, 909192939, 949596979, 999100101
+    )
+),FilteredObjects AS (
+    SELECT DISTINCT ObjCode
+    FROM MaskedTable1
+),
+RolePriorities AS (
+    SELECT 
+        mt1.ObjCode,
+        mt1.CliCode,
+        MaskedBrandTable.CliBrandCode,
+        MaskedBrandTable.CliBrandName,
+        mt1.RoleCode,
+        CASE WHEN mt1.RoleCode IN ('OWNERSHIP','DEVELOPER') THEN MaskedBrandTable.CliBrandName ELSE NULL END AS Developer,
+        ObjDescriptionTable.ObjName,
+        CASE
+            WHEN mt1.RoleCode IN ('ROLE_X') THEN 1
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 2
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 3
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 4
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 5
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 6
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 7
+            WHEN mt1.RoleCode = 'ROLE_X' THEN 8
+            ELSE 9
+        END AS Priority,
+        ROW_NUMBER() OVER (
+            PARTITION BY mt1.CliCode, mt1.ObjCode
+            ORDER BY 
+                CASE
+                     WHEN mt1.RoleCode IN ('ROLE_X','ROLE_X') THEN 1
+                     WHEN mt1.RoleCode = 'ROLE_X' THEN 2
+                     WHEN mt1.RoleCode = 'ROLE_X' THEN 3
+                     WHEN mt1.RoleCode = 'ROLE_X' THEN 4
+                     WHEN mt1.RoleCode = 'ROLE_X' THEN 5
+                     WHEN mt1.RoleCode = 'ROLE_X' THEN 6
+                     WHEN mt1.RoleCode = 'ROLE_X' THEN 7
+                     WHEN mt1.RoleCode ='ROLE_X' THEN 8
+                    ELSE 9
+                END
+        ) AS rn
+    FROM MaskedSchema.RoleTable mt1
+    LEFT JOIN MaskedBrandTable ON MaskedBrandTable.CliCode = mt1.CliCode
+    LEFT JOIN MaskedObjDescTable ON mt1.ObjCode = MaskedObjDescTable.ObjCode
+    WHERE mt1.ObjCode IN (SELECT ObjCode FROM FilteredObjects)
+),
+RoleRespBrand AS (
+    SELECT DISTINCT
+        MaskedBrandTable.CliBrandCode,
+        CASE 
+            WHEN MaskedBrandTable.CliBrandCode IN (111111,222222,333333) THEN 'Masked Name 1'
+            WHEN MaskedBrandTable.CliBrandCode IN (444444,555555) THEN 'Masked Name 2'
+            ELSE 'Unknown' 
+        END AS ResponsiblePerson
+    FROM MaskedSchema.RoleTable mt1
+    LEFT JOIN MaskedBrandTable ON MaskedBrandTable.CliCode = mt1.CliCode
+    WHERE
+        mt1.RoleCode IN ('GENERAL_CONTRACTOR', 'OWNERSHIP')
+    AND MaskedBrandTable.CliBrandCode IN (111111,222222,333333,444444,555555)
+),
+SalesSumClientQ1 AS (
+    SELECT
+        xxx.CliCode,
+        ROUND(SUM(xxx.SumSaled), 2) AS Sales_Q1_202X
+    FROM MaskedSchema.ClientTurnover ctdf
+    WHERE xxx.DataInfo >= 'XXXX-XX-XX' AND xxx.DataInfo <= 'XXXX-XX-XX'
+    GROUP BY xxx.CliCode
+),
+SalesSumClientObjectQ1 AS (
+    SELECT
+        xxx.CliCode,
+        xxx.ObjCode,
+        ROUND(SUM(ctdf.SumSaled), 2) AS Sales_Obj_Q1_202X
+    FROM MaskedSchema.ClientTurnover ctdf
+    WHERE ctdf.DataInfo >= 'XXXX-XX'-XX'' AND ctdf.DataInfo <= 'XXXX-XX'-XX''
+    GROUP BY xxx.CliCode, xxxObjCode
+)
+-- Аналогично для остальных кварталов и годов
+SELECT 
+    t_obj.ObjCode AS Код_Объекта,
+    t_obj.CliCode AS Контрагент,
+    t_obj.CliBrandCode AS Код_Бренда,
+    t_obj.CliBrandName AS Имя_Бренда,
+    t_obj.RoleCode AS Роль,
+    t_obj.Застройщик AS Застройщик,
+    t_br.Responsible AS Ответственный_за_Бренд,
+    t_obj_res.Responsible AS Ответственный_за_Объект,
+    t_obj.ObjName AS Имя_Объекта,
+    t_kv_2025.q1 AS ГО_по_клиенту_1КВ_2025,
+    t_obj_kv_2025.q1 AS ГО_по_клиенту_на_объекте_1КВ_2025,
+    t_kv_2025.q2 AS ГО_по_клиенту_2КВ_2025,
+    t_obj_kv_2025.q2 AS ГО_по_клиенту_на_объекте_2КВ_2025,
+    t_kv_2025.q3 AS ГО_по_клиенту_3КВ_2025,
+    t_obj_kv_2025.q3 AS ГО_по_клиенту_на_объекте_3КВ_2025,
+    t_kv_2025.q4 AS ГО_по_клиенту_4КВ_2025,
+    t_obj_kv_2025.q4 AS ГО_по_клиенту_на_объекте_4КВ_2025,
+    t_kv_2024.q1 AS ГО_по_клиенту_1КВ_2024,
+    t_obj_kv_2024.q1 AS ГО_по_клиенту_на_объекте_1КВ_2024,
+    t_kv_2024.q2 AS ГО_по_клиенту_2КВ_2024,
+    t_obj_kv_2024.q2 AS ГО_по_клиенту_на_объекте_2КВ_2024,
+    t_kv_2024.q3 AS ГО_по_клиенту_3КВ_2024,
+    t_obj_kv_2024.q3 AS ГО_по_клиенту_на_объекте_3КВ_2024,
+    t_kv_2024.q4 AS ГО_по_клиенту_4КВ_2024,
+    t_obj_kv_2024.q4 AS ГО_по_клиенту_на_объекте_4КВ_2024,
+    t_kv_2026.q1 AS ГО_по_клиенту_1КВ_2026,
+    t_obj_kv_2026.q1 AS ГО_по_клиенту_на_объекте_1КВ_2026,
+    t_to_2025.q1 AS ТО_по_клиенту_1КВ_2025,
+    t_to_2025.q2 AS ТО_по_клиенту_2КВ_2025,
+    t_to_2025.q3 AS ТО_по_клиенту_3КВ_2025,
+    t_to_2025.q4 AS ТО_по_клиенту_4КВ_2025,
+    t_to_2024.q1 AS ТО_по_клиенту_1КВ_2024,
+    t_to_2024.q2 AS ТО_по_клиенту_2КВ_2024,
+    t_to_2024.q3 AS ТО_по_клиенту_3КВ_2024,
+    t_to_2024.q4 AS ТО_по_клиенту_4КВ_2024,
+    t_to_2026.q1 AS ТО_по_клиенту_1КВ_2026,
+    t_rt_2026.obj_client_q1 AS РТН_ГО_Объект_Клиент_Q1_2026,
+    t_rt_2024.obj_client_q1 AS РТН_ГО_Объект_Клиент_Q1_2024,
+    t_rt_2024.obj_client_q2 AS РТН_ГО_Объект_Клиент_Q2_2024,
+    t_rt_2024.obj_client_q3 AS РТН_ГО_Объект_Клиент_Q3_2024,
+    t_rt_2024.obj_client_q4 AS РТН_ГО_Объект_Клиент_Q4_2024,
+    t_rt_2025.obj_client_q1 AS РТН_ГО_Объект_Клиент_Q1_2025,
+    t_rt_2025.obj_client_q2 AS РТН_ГО_Объект_Клиент_Q2_2025,
+    t_rt_2025.obj_client_q3 AS РТН_ГО_Объект_Клиент_Q3_2025,
+    t_rt_2025.obj_client_q4 AS РТН_ГО_Объект_Клиент_Q4_2025,
+    t_rt_to_2026.obj_client_q1 AS РТН_ТО_Клиент_Q1_2026,
+    t_rt_to_2024.obj_client_q1 AS РТН_ТО_Клиент_Q1_2024,
+    t_rt_to_2024.obj_client_q2 AS РТН_ТО_Клиент_Q2_2024,
+    t_rt_to_2024.obj_client_q3 AS РТН_ТО_Клиент_Q3_2024,
+    t_rt_to_2024.obj_client_q4 AS РТН_ТО_Клиент_Q4_2024,
+    t_rt_to_2025.obj_client_q1 AS РТН_ТО_Клиент_Q1_2025,
+    t_rt_to_2025.obj_client_q2 AS РТН_ТО_Клиент_Q2_2025,
+    t_rt_to_2025.obj_client_q3 AS РТН_ТО_Клиент_Q3_2025,
+    t_rt_to_2025.obj_client_q4 AS РТН_ТО_Клиент_Q4_2025
+FROM 
+    TableRoles t_obj
+LEFT JOIN 
+    TableObjects t_obj_res ON t_obj_res.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableBrandsResponsible t_br ON t_br.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableObjectsResponsible t_obj_res ON t_obj_res.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2025_Q1 t_kv_2025 ON t_kv_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2025_Q1 t_obj_kv_2025 ON t_obj_kv_2025.CliCode = t_obj.CliCode AND t_obj_kv_2025.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2025_Q2 t_kv_2025 ON t_kv_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2025_Q2 t_obj_kv_2025 ON t_obj_kv_2025.CliCode = t_obj.CliCode AND t_obj_kv_2025.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2025_Q3 t_kv_2025 ON t_kv_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2025_Q3 t_obj_kv_2025 ON t_obj_kv_2025.CliCode = t_obj.CliCode AND t_obj_kv_2025.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2025_Q4 t_kv_2025 ON t_kv_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2025_Q4 t_obj_kv_2025 ON t_obj_kv_2025.CliCode = t_obj.CliCode AND t_obj_kv_2025.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2024_Q1 t_kv_2024 ON t_kv_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2024_Q1 t_obj_kv_2024 ON t_obj_kv_2024.CliCode = t_obj.CliCode AND t_obj_kv_2024.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2024_Q2 t_kv_2024 ON t_kv_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2024_Q2 t_obj_kv_2024 ON t_obj_kv_2024.CliCode = t_obj.CliCode AND t_obj_kv_2024.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2024_Q3 t_kv_2024 ON t_kv_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2024_Q3 t_obj_kv_2024 ON t_obj_kv_2024.CliCode = t_obj.CliCode AND t_obj_kv_2024.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2024_Q4 t_kv_2024 ON t_kv_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2024_Q4 t_obj_kv_2024 ON t_obj_kv_2024.CliCode = t_obj.CliCode AND t_obj_kv_2024.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSumClient2026_Q1 t_kv_2026 ON t_kv_2026.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSumClientObject2026_Q1 t_obj_kv_2026 ON t_obj_kv_2026.CliCode = t_obj.CliCode AND t_obj_kv_2026.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableSaledSum_O_Client2025_Q1 t_o_2025 ON t_o_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2025_Q2 t_o_2025 ON t_o_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2025_Q3 t_o_2025 ON t_o_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2025_Q4 t_o_2025 ON t_o_2025.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2024_Q2 t_o_2024 ON t_o_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2024_Q1 t_o_2024 ON t_o_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2024_Q3 t_o_2024 ON t_o_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2024_Q4 t_o_2024 ON t_o_2024.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableSaledSum_O_Client2026_Q1 t_o_2026 ON t_o_2026.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_ClientObject2026_Q1 t_rt_2026 ON t_rt_2026.CliCode = t_obj.CliCode AND t_rt_2026.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2024_Q1 t_rt_2024_q1 ON t_rt_2024_q1.CliCode = t_obj.CliCode AND t_rt_2024_q1.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2024_Q2 t_rt_2024_q2 ON t_rt_2024_q2.CliCode = t_obj.CliCode AND t_rt_2024_q2.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2024_Q3 t_rt_2024_q3 ON t_rt_2024_q3.CliCode = t_obj.CliCode AND t_rt_2024_q3.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2024_Q4 t_rt_2024_q4 ON t_rt_2024_q4.CliCode = t_obj.CliCode AND t_rt_2024_q4.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2025_Q1 t_rt_2025_q1 ON t_rt_2025_q1.CliCode = t_obj.CliCode AND t_rt_2025_q1.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2025_Q2 t_rt_2025_q2 ON t_rt_2025_q2.CliCode = t_obj.CliCode AND t_rt_2025_q2.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2025_Q3 t_rt_2025_q3 ON t_rt_2025_q3.CliCode = t_obj.CliCode AND t_rt_2025_q3.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_ClientObject2025_Q4 t_rt_2025_q4 ON t_rt_2025_q4.CliCode = t_obj.CliCode AND t_rt_2025_q4.ObjCode = t_obj.ObjCode
+LEFT JOIN 
+    TableRTN_O_Client2026_Q1 t_rt_o_2026 ON t_rt_o_2026.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2024_Q1 t_rt_o_2024_q1 ON t_rt_o_2024_q1.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2024_Q2 t_rt_o_2024_q2 ON t_rt_o_2024_q2.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2024_Q3 t_rt_o_2024_q3 ON t_rt_o_2024_q3.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2024_Q4 t_rt_o_2024_q4 ON t_rt_o_2024_q4.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2025_Q1 t_rt_o_2025_q1 ON t_rt_o_2025_q1.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2025_Q2 t_rt_o_2025_q2 ON t_rt_o_2025_q2.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2025_Q3 t_rt_o_2025_q3 ON t_rt_o_2025_q3.CliCode = t_obj.CliCode
+LEFT JOIN 
+    TableRTN_O_Client2025_Q4 t_rt_o_2025_q4 ON t_rt_o_2025_q4.CliCode = t_obj.CliCode
+WHERE 
+    t_obj.rn = 1
+GROUP BY 
+    t_obj.ObjCode,
+    t_obj.CliCode,
+    t_obj.CliBrandCode,
+    t_obj.CliBrandName,
+    t_obj.RoleCode,
+    t_obj.ObjName,
+    t_obj.Застройщик,
+    t_br.Responsible,
+    t_obj_res.Responsible,
+    t_kv_2025.q1,
+    t_obj_kv_2025.q1,
+    t_kv_2025.q2,
+    t_obj_kv_2025.q2,
+    t_kv_2025.q3,
+    t_obj_kv_2025.q3,
+    t_kv_2025.q4,
+    t_obj_kv_2025.q4,
+    t_kv_2024.q1,
+    t_obj_kv_2024.q1,
+    t_kv_2024.q2,
+    t_obj_kv_2024.q2,
+    t_kv_2024.q3,
+    t_obj_kv_2024.q3,
+    t_kv_2024.q4,
+    t_obj_kv_2024.q4,
+    t_kv_2026.q1,
+    t_obj_kv_2026.q1,
+    t_to_2025.q1,
+    t_to_2025.q2,
+    t_to_2025.q3,
+    t_to_2025.q4,
+    t_to_2024.q1,
+    t_to_2024.q2,
+    t_to_2024.q3,
+    t_to_2024.q4,
+    t_to_2026.q1,
+    t_rt_2026.obj_client_q1,
+    t_rt_2024.obj_client_q1,
+    t_rt_2024.obj_client_q2,
+    t_rt_2024.obj_client_q3,
+    t_rt_2024.obj_client_q4,
+    t_rt_2025.obj_client_q1,
+    t_rt_2025.obj_client_q2,
+    t_rt_2025.obj_client_q3,
+    t_rt_2025.obj_client_q4,
+    t_rt_o_2026.obj_client_q1,
+    t_rt_o_2024_q1.obj_client_q1,
+    t_rt_o_2024_q2.obj_client_q2,
+    t_rt_o_2024_q3.obj_client_q3,
+    t_rt_o_2024_q4.obj_client_q4,
+    t_rt_o_2025_q1.obj_client_q1,
+    t_rt_o_2025_q2.obj_client_q2,
+    t_rt_o_2025_q3.obj_client_q3,
+    t_rt_o_2025_q4.obj_client_q4
+ORDER BY 
+    Код_Объекта, Контрагент;
