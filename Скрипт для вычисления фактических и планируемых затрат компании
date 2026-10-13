@@ -1,248 +1,591 @@
 WITH
-fact_data  
-AS (
-    WITH Query1 AS (
-        SELECT 
-            d1.YearID AS Year,
-            d1.MonthID AS Month,
-            d1.SalesChannelID AS Sales_Channel,
-            d1.SalesSubtypeID AS Specialty,
-            Cat2.Name_Level2 AS Campaign,
-            Cat3.Name_Level3 AS Department,
-            Cat1.Name_Level1 AS Product_Direction,
-            Cat1.Name_Level2 AS Product_Dept,
-            LEFT(d1.ClassCode, 5) AS OpCode,
-            ROUND(SUM(d1.SaleAmount), 2) AS Revenue,
-            ROUND(SUM(d1.SaleAmount) - SUM(d1.Cost), 2) AS Margin_81,
-            ROUND(SUM(d1.SaleAmount) - SUM(d1.AccCost), 2) AS Margin_Cost,
-            ROUND(SUM(SUM(d1.SaleAmount)) OVER (PARTITION BY d1.YearID, d1.MonthID), 2) AS Total_Sum_Month_Revenue,
-            ROUND(SUM(SUM(d1.SaleAmount) - SUM(d1.Cost)) OVER (PARTITION BY d1.YearID, d1.MonthID), 2) AS Total_Sum_Month_Margin81,
-            ROUND(SUM(SUM(d1.SaleAmount) - SUM(d1.AccCost)) OVER (PARTITION BY d1.YearID, d1.MonthID), 2) AS Total_Sum_Month_MarginCost,
-            ROUND(SUM(d1.SaleAmount) / LAG(SUM(d1.SaleAmount)) OVER (PARTITION BY 
-                d1.SalesChannelID, 
-                d1.SalesSubtypeID,  
-                Cat2.Name_Level2, 
-                Cat2.Name_Level3,
-                Cat1.Name_Level1,
-                Cat1.Name_Level2,
-                LEFT(d1.ClassCode, 5)
-                ORDER BY d1.YearID, d1.MonthID), 2) AS CR_Revenue,
-            ROUND(SUM(d1.SaleAmount) - SUM(d1.Cost) / LAG(SUM(d1.SaleAmount) - SUM(d1.Cost)) OVER (PARTITION BY 
-                d1.SalesChannelID, 
-                d1.SalesSubtypeID,  
-                Cat2.Name_Level2, 
-                Cat2.Name_Level3,
-                Cat1.Name_Level1,
-                Cat1.Name_Level2,
-                LEFT(d1.ClassCode, 5)
-                ORDER BY d1.YearID, d1.MonthID), 2) AS CR_Margin_81,
-            ROUND(SUM(d1.SaleAmount) - SUM(d1.AccCost) / LAG(SUM(d1.SaleAmount) - SUM(d1.AccCost)) OVER (PARTITION BY 
-                d1.SalesChannelID, 
-                d1.SalesSubtypeID,  
-                Cat2.Name_Level2, 
-                Cat2.Name_Level3,
-                Cat1.Name_Level1,
-                Cat1.Name_Level2,
-                LEFT(d1.ClassCode, 5)
-                ORDER BY d1.YearID, d1.MonthID), 2) AS CR_Margin_Cost
-        FROM 
-            Data_Schema.FactSales d1
-        LEFT JOIN (
-            SELECT  
-                g1.CodeSrc AS CodeSrc,
-                g1.CodeGrp AS CodeGrp
-            FROM GroupMapping g1
-            WHERE 
-                g1.TypeSrc = 37 
-                AND g1.TypeGrp = 63 
-                AND g1.CodeGrp LIKE 'XYZ%'
-        ) AS RulesGroup
-        ON LEFT(d1.ClassCode, 5) = RulesGroup.CodeSrc
-        AND RulesGroup.CodeGrp LIKE 'XYZ%'
-        LEFT JOIN Category2 Cat2 ON RulesGroup.CodeGrp = Cat2.Code
-        LEFT JOIN Category3 Cat3 ON d1.DivisionCode = Cat3.Code
-        LEFT JOIN Category1 Cat1 ON d1.GroupCode = Cat1.Code
-        WHERE 
-            d1.YearID >= 2024 
-            AND d1.MonthID = 8
-            AND LEFT(Cat3.Code, 1) NOT LIKE '6%'
-        GROUP BY 
-            d1.YearID,
-            d1.MonthID,
-            d1.SalesChannelID,
-            d1.SalesSubtypeID,
-            Cat2.Name_Level2,
-            Cat2.Name_Level3,
-            Cat1.Name_Level1,
-            Cat1.Name_Level2,
-            LEFT(d1.ClassCode, 5)
-        ),
-    Query2 AS (
-        SELECT 
-            o.YearID AS Year,
-            o.MonthID AS Month,
-            o.SalesChannelID AS Sales_Channel,
-            o.SalesSubtypeID AS Specialty,
-            Cat2.Name_Level2 AS Campaign,
-            Cat3.Name_Level3 AS Department,
-            Cat1.Name_Level1 AS Product_Direction,
-            Cat1.Name_Level2 AS Product_Dept,
-            LEFT(o.ClassCode, 5) AS OpCode,
-            ROUND(SUM(o.SaleAmount), 2) AS Revenue,
-            ROUND(SUM(o.SaleAmount) - SUM(o.Cost), 2) AS Margin_81,
-            ROUND(SUM(o.SaleAmount) - SUM(o.AccCost), 2) AS Margin_Cost,
-            ROUND(SUM(SUM(o.SaleAmount)) OVER (PARTITION BY o.YearID, o.MonthID), 2) AS Total_Sum_Month_Revenue,
-            ROUND(SUM(SUM(o.SaleAmount) - SUM(o.Cost)) OVER (PARTITION BY o.YearID, o.MonthID), 2) AS Total_Sum_Month_Margin81,
-            ROUND(SUM(SUM(o.SaleAmount) - SUM(o.AccCost)) OVER (PARTITION BY o.YearID, o.MonthID), 2) AS Total_Sum_Month_MarginCost,
-            ROUND(SUM(o.SaleAmount) / LAG(SUM(o.SaleAmount)) OVER (PARTITION BY 
-                o.SalesChannelID, 
-                o.SalesSubtypeID,  
-                Cat2.Name_Level2, 
-                Cat2.Name_Level3,
-                Cat1.Name_Level1,
-                Cat1.Name_Level2,
-                LEFT(o.ClassCode, 5)
-                ORDER BY o.YearID, o.MonthID), 2) AS CR_Revenue,
-            ROUND(SUM(o.SaleAmount) - SUM(o.Cost) / LAG(SUM(o.SaleAmount) - SUM(o.Cost)) OVER (PARTITION BY 
-                o.SalesChannelID, 
-                o.SalesSubtypeID,  
-                Cat2.Name_Level2, 
-                Cat2.Name_Level3,
-                Cat1.Name_Level1,
-                Cat1.Name_Level2,
-                LEFT(o.ClassCode, 5)
-                ORDER BY o.YearID, o.MonthID), 2) AS CR_Margin_81,
-            ROUND(SUM(o.SaleAmount) - SUM(o.AccCost) / LAG(SUM(o.SaleAmount) - SUM(o.AccCost)) OVER (PARTITION BY 
-                o.SalesChannelID, 
-                o.SalesSubtypeID,  
-                Cat2.Name_Level2, 
-                Cat2.Name_Level3,
-                Cat1.Name_Level1,
-                Cat1.Name_Level2,
-                LEFT(o.ClassCode, 5)
-                ORDER BY o.YearID, o.MonthID), 2) AS CR_Margin_Cost
-        FROM 
-            Data_Other.OtTable o
-        LEFT JOIN (
-            SELECT  
-                g1.CodeSrc AS CodeSrc,
-                g1.CodeGrp AS CodeGrp
-            FROM GroupMapping g1
-            WHERE 
-                g1.TypeSrc = 37 
-                AND g1.TypeGrp = 63 
-                AND g1.CodeGrp LIKE 'XYZ%'
-        ) AS RulesGroup
-        ON LEFT(o.ClassCode, 5) = RulesGroup.CodeSrc
-        AND RulesGroup.CodeGrp LIKE 'XYZ%'
-        LEFT JOIN Category2 Cat2 ON RulesGroup.CodeGrp = Cat2.Code
-        LEFT JOIN Category3 Cat3 ON o.DivisionCode = Cat3.Code
-        LEFT JOIN Category1 Cat1 ON o.GroupCode = Cat1.Code
-        WHERE 
-            o.YearID >= 2024 
-            AND o.MonthID = 8
-            AND LEFT(Cat3.Code, 1) NOT LIKE '6%'
-        GROUP BY 
-            o.YearID,
-            o.MonthID,
-            o.SalesChannelID,
-            o.SalesSubtypeID,
-            Cat2.Name_Level2,
-            Cat2.Name_Level3,
-            Cat1.Name_Level1,
-            Cat1.Name_Level2,
-            LEFT(o.ClassCode, 5)
-        )
+table_fact  
+AS (WITH Query1 AS (
     SELECT 
-        COALESCE(q1.Year, q2.Year) AS Year,
-        COALESCE(q1.Month, q2.Month) AS Month,
-        COALESCE(q1.Sales_Channel, q2.Sales_Channel) AS Sales_Channel,
-        COALESCE(q1.Specialty, q2.Specialty) AS Specialty,
-        COALESCE(q1.Campaign, q2.Campaign) AS Campaign,
-        COALESCE(q1.Department, q2.Department) AS Department,
-        COALESCE(q1.Product_Direction, q2.Product_Direction) AS Product_Direction,
-        COALESCE(q1.Product_Dept, q2.Product_Dept) AS Product_Dept,
-        COALESCE(q1.OpCode, q2.OpCode) AS OpCode,
-        q1.Revenue AS Revenue_Fact,
-        q1.Margin_81 AS Margin_81_Fact,
-        q1.Margin_Cost AS Margin_Cost_Fact,
-        q1.Total_Sum_Month_Revenue AS Total_Month_Revenue_Fact,
-        q1.Total_Sum_Month_Margin81 AS Total_Month_Margin81_Fact,
-        q1.Total_Sum_Month_MarginCost AS Total_Month_MarginCost_Fact,
-        q1.CR_Revenue AS CR_Revenue_Fact,
-        q1.CR_Margin_81 AS CR_Margin_81_Fact,
-        q1.CR_Margin_Cost AS CR_Margin_Cost_Fact,
-        q2.Revenue AS Revenue_Plan,
-        q2.Margin_81 AS Margin_81_Plan,
-        q2.Margin_Cost AS Margin_Cost_Plan,
-        q2.Total_Sum_Month_Revenue AS Total_Month_Revenue_Plan,
-        q2.Total_Sum_Month_Margin81 AS Total_Month_Margin81_Plan,
-        q2.Total_Sum_Month_MarginCost AS Total_Month_MarginCost_Plan,
-        q2.CR_Revenue AS CR_Revenue_Plan,
-        q2.CR_Margin_81 AS CR_Margin_81_Plan,
-        q2.CR_Margin_Cost AS CR_Margin_Cost_Plan
-    FROM fact_data tf
-    FULL JOIN plan_data pd 
-        ON tf.Year = pd.Year
-        AND tf.Month = pd.Month
-        AND tf.Sales_Channel = pd.Sales_Channel
-        AND tf.Sales_Subtype = pd.Sales_Subtype
-        AND tf.Campaign = pd.Campaign
-        AND tf.Department = pd.Department
-        AND tf.Product_Direction = pd.Product_Direction
-        AND tf.Product_Dept = pd.Product_Dept
-        AND tf.OpCode = pd.OpCode
-    WHERE COALESCE(tf.Year, pd.Year) >= 2024 
-      AND COALESCE(tf.Month, pd.Month) = 8
+        ctdf.YearInfo AS Год,
+        ctdf.MonthInfo AS Месяц,
+        ctdf.SalesChannel AS Канал_продаж,
+        ctdf.SalesSubChannel AS Специализация,
+        Class63.Class63_Name_Level2 AS РК,
+        Class63.Class63_Name_Level3 AS  ДП,
+        Class305.Class305_Name_Level1 AS Товарное_направление,
+        Class305.Class305_Name_Level2 AS Товарный_отдел,
+        LEFT(ctdf.Class37_Code, 5) AS ОП,
+        ROUND(SUM(ctdf.SumSaled), 2) AS ГО,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRb), 2) AS Разница_81_ГО,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.CostAcc) - SUM(ctdf.SumRb), 2) AS Разница_СРС_ГО,
+        ROUND(SUM(SUM(ctdf.SumSaled)) OVER (PARTITION BY ctdf.YearInfo,ctdf.MonthInfo), 2) AS Общая_Сумма_ГО_Месяц,
+        ROUND(SUM(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRb)) OVER (PARTITION BY ctdf.YearInfo,ctdf.MonthInfo), 2) AS Общая_Сумма_РТН_81_ГО_Месяц,
+        ROUND(SUM(SUM(ctdf.SumSaled) - SUM(ctdf.CostAcc) - SUM(ctdf.SumRb)) OVER (PARTITION BY ctdf.YearInfo,ctdf.MonthInfo), 2) AS Общая_Сумма_РТН_СРС_ГО_Месяц,
+        ROUND(SUM(ctdf.SumSaled) / LAG(SUM(ctdf.SumSaled)) OVER (PARTITION BY 
+        ctdf.SalesChannel, 
+        ctdf.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctdf.Class37_Code, 5)
+        ORDER BY ctdf.YearInfo, ctdf.MonthInfo), 2) AS КР_ГО,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRb) / LAG(SUM(ctdf.SumSaled) - SUM(ctdf.Cost) - SUM(ctdf.SumRb)) OVER (PARTITION BY 
+        ctdf.SalesChannel,
+        ctdf.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctdf.Class37_Code, 5)
+        ORDER BY ctdf.YearInfo, ctdf.MonthInfo), 2) AS КР_Разница_81_ГО,
+        ROUND(SUM(ctdf.SumSaled) - SUM(ctdf.CostAcc) - SUM(ctdf.SumRb) / LAG(SUM(ctdf.SumSaled) - SUM(ctdf.CostAcc) - SUM(ctdf.SumRb), 2) OVER (PARTITION BY 
+        ctdf.SalesChannel,
+        ctdf.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctdf.Class37_Code, 5)
+        ORDER BY ctdf.YearInfo, ctdf.MonthInfo), 2) AS КР_Разница_CPC_ГО
+    FROM 
+        DataPrime.CliTurnoverDtl_Fin ctdf
+    LEFT JOIN 
+        (
+            SELECT  
+                ClassGroup.ClassCodeSrc AS Clas37_Code,
+                ClassGroup.ClassCodeGrp AS Class63_Code
+            FROM ClassGroup
+            WHERE 
+                ClassGroup.ClassTypeSrc = 37 
+                AND ClassGroup.ClassTypeGrp = 63 
+                AND ClassGroup.ClassCodeGrp LIKE 'УП%'
+        ) AS RulesGroup
+        ON LEFT(ctdf.Class37_Code, 5) = RulesGroup.Clas37_Code
+        AND RulesGroup.Class63_Code LIKE 'УП%'
+    LEFT JOIN Class63 ON RulesGroup.Class63_Code = Class63.Class63_Code
+    LEFT JOIN RgdDivisDprt ON ctdf.RgdCode = RgdDivisDprt.RgdCode
+    LEFT JOIN Class305 ON RgdDivisDprt.Class305_Code = Class305.Class305_Code
+    LEFT JOIN DescRgd ON ctdf.RgdCode = DescRgd.RgdCode
+    LEFT JOIN Class33 ON DescRgd.Class33_Code = Class33.Class33_Code
+    LEFT JOIN DescMan dm2 ON dm2.ManCode = ctdf.ManCode
+    LEFT JOIN Class33 c2 ON DescRgd.Class33_Code = c2.Class33_Code
+    WHERE 
+        ctdf.YearInfo >= 2024 
+        AND ctdf.MonthInfo = 8
+        AND LEFT(c2.Class33_Code, 1) not like '6%'
+    GROUP BY 
+        ctdf.YearInfo,
+        ctdf.MonthInfo,
+        ctdf.SalesChannel,
+        ctdf.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctdf.Class37_Code, 5)
 ),
-final_result AS (
-    SELECT
-        COALESCE(f1.Year, f2.Year) AS Year,
-        COALESCE(f1.Month, f2.Month) AS Month,
-        COALESCE(f1.Sales_Channel, f2.Sales_Channel) AS Sales_Channel,
-        COALESCE(f1.Specialty, f2.Specialty) AS Specialty,
-        COALESCE(f1.Campaign, f2.Campaign) AS Campaign,
-        COALESCE(f1.Department, f2.Department) AS Department,
-        COALESCE(f1.Product_Direction, f2.Product_Direction) AS Product_Direction,
-        COALESCE(f1.Product_Dept, f2.Product_Dept) AS Product_Dept,
-        COALESCE(f1.OpCode, f2.OpCode) AS OpCode,
-        f2.Plan_Revenue AS Plan_Revenue,
-        f1.Fact_Revenue AS Fact_Revenue,
-        f2.Plan_Margin81 AS Plan_Margin81,
-        f1.Margin_81 AS Fact_Margin81,
-        f2.Plan_MarginCost AS Plan_MarginCost,
-        f1.Margin_Cost AS Fact_MarginCost,
-        ROUND((f1.Fact_Revenue / f2.Plan_Revenue) * 100, 2) AS Variance_Revenue_Percent,
-        ROUND((f1.Margin_81 / f2.Plan_Margin81) * 100, 2) AS Variance_Margin81_Percent,
-        ROUND((f1.Margin_Cost / f2.Plan_MarginCost) * 100, 2) AS Variance_MarginCost_Percent,
-        f1.Total_Month_Margin81 AS Total_Month_Margin81_Fact,
-        f1.Campaign AS Campaign_Fact,
-        f1.Total_Month_MarginCost AS Total_Month_MarginCost_Fact,
-        f2.Plan_Revenue AS Revenue_Plan,
-        f2.Plan_Margin81 AS Margin81_Plan,
-        f2.Plan_MarginCost AS MarginCost_Plan,
-        f2.Total_Month_Revenue AS Total_Month_Revenue_Plan,
-        f2.Total_Month_Margin81 AS Total_Month_Margin81_Plan,
-        f2.Total_Month_MarginCost AS Total_Month_MarginCost_Plan,
-        f2.Campaign AS Campaign_Plan,
-        f2.Campaign AS Campaign_Plan_Variance,
-        f2.Campaign AS Campaign_Plan_Variance2
-    FROM final_data f1
-    FULL JOIN final_plan f2 ON 
-        f1.Year = f2.Year
-        AND f1.Month = f2.Month
-        AND f1.Sales_Channel = f2.Sales_Channel
-        AND f1.Specialty = f2.Specialty
-        AND f1.Campaign = f2.Campaign
-        AND f1.Department = f2.Department
-        AND f1.Product_Direction = f2.Product_Direction
-        AND f1.Product_Dept = f2.Product_Dept
-        AND f1.OpCode = f2.OpCode
-    WHERE COALESCE(f1.Year, f2.Year) >= 2024
-      AND COALESCE(f1.Month, f2.Month) = 8
+Query2 AS (
+    SELECT 
+        o.YearInfo AS Год,
+        o.MonthInfo AS Месяц,
+        o.SalesChannel AS Канал_продаж,
+        o.SalesSubChannel AS Специализация,
+        Class63.Class63_Name_Level2 AS РК,
+        Class63.Class63_Name_Level3 AS  ДП,
+        Class305.Class305_Name_Level1 AS Товарное_направление,
+        Class305.Class305_Name_Level2 AS Товарный_отдел,
+        LEFT(o.Class37_Code, 5) AS ОП,
+        ROUND(SUM(o.SumSaled), 2) AS ТО,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRb), 2) AS Разница_81_ТО,
+        ROUND(SUM(o.SumSaled) - SUM(o.CostAcc) - SUM(o.SumRb), 2) AS Разница_СРС_ТО,
+        ROUND(SUM(SUM(o.SumSaled)) OVER (PARTITION BY o.YearInfo,o.MonthInfo), 2) AS Общая_Сумма_ТО_Месяц,
+        ROUND(SUM(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRb)) OVER (PARTITION BY o.YearInfo,o.MonthInfo), 2) AS Общая_Сумма_РТН_81_ТО_Месяц,
+        ROUND(SUM(SUM(o.SumSaled) - SUM(o.CostAcc) - SUM(o.SumRb)) OVER (PARTITION BY o.YearInfo,o.MonthInfo), 2) AS Общая_Сумма_РТН_СРС_ТО_Месяц,
+        ROUND(SUM(o.SumSaled) / LAG(SUM(o.SumSaled)) OVER (PARTITION BY 
+        o.SalesChannel, 
+        o.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(o.Class37_Code, 5)
+        ORDER BY o.YearInfo, o.MonthInfo), 2) AS КР_ТО,
+        ROUND(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRb) / LAG(SUM(o.SumSaled) - SUM(o.Cost) - SUM(o.SumRb)) OVER (PARTITION BY 
+        o.SalesChannel,
+        o.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(o.Class37_Code, 5)
+        ORDER BY o.YearInfo, o.MonthInfo), 2) AS КР_Разница_81_ТО,
+        ROUND(SUM(o.SumSaled) - SUM(o.CostAcc) - SUM(o.SumRb) / LAG(SUM(o.SumSaled) - SUM(o.CostAcc) - SUM(o.SumRb)) OVER (PARTITION BY 
+        o.SalesChannel,
+        o.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(o.Class37_Code, 5)
+        ORDER BY o.YearInfo, o.MonthInfo), 2) AS КР_Разница_CPC_ТО
+        FROM 
+           Ot o
+        LEFT JOIN 
+        (
+            SELECT  
+                ClassGroup.ClassCodeSrc AS Clas37_Code,
+                ClassGroup.ClassCodeGrp AS Class63_Code
+            FROM ClassGroup
+            WHERE 
+                ClassGroup.ClassTypeSrc = 37 
+                AND ClassGroup.ClassTypeGrp = 63 
+                AND ClassGroup.ClassCodeGrp LIKE 'УП%'
+        ) AS RulesGroup
+        ON LEFT(o.Class37_Code, 5) = RulesGroup.Clas37_Code
+        AND RulesGroup.Class63_Code LIKE 'УП%'
+    LEFT JOIN Class63 ON RulesGroup.Class63_Code = Class63.Class63_Code
+    LEFT JOIN RgdDivisDprt ON o.RgdCode = RgdDivisDprt.RgdCode
+    LEFT JOIN Class305 ON RgdDivisDprt.Class305_Code = Class305.Class305_Code
+    LEFT JOIN DescRgd ON o.RgdCode = DescRgd.RgdCode
+    LEFT JOIN Class33 ON DescRgd.Class33_Code = Class33.Class33_Code
+    LEFT JOIN DescMan dm2 ON dm2.ManCode = o.ManCode
+    LEFT JOIN Class33 c2 ON DescRgd.Class33_Code = c2.Class33_Code
+    WHERE 
+        o.YearInfo >= 2024 
+        AND o.MonthInfo = 8
+        AND LEFT(c2.Class33_Code, 1) not like '6%'
+    GROUP BY 
+        o.YearInfo,
+        o.MonthInfo,
+        o.SalesChannel,
+        o.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(o.Class37_Code, 5)
+)
+SELECT 
+    COALESCE(q1.Год, q2.Год) AS Год,
+    COALESCE(q1.Месяц, q2.Месяц) AS Месяц,
+    COALESCE(q1.Канал_продаж, q2.Канал_продаж) AS Канал_продаж,
+    COALESCE(q1.Специализация, q2.Специализация) AS Специализация,
+    COALESCE(q1.РК, q2.РК) AS РК,
+    COALESCE(q1.ДП, q2.ДП) AS ДП, 
+    COALESCE(q1.Товарное_направление, q2.Товарное_направление) AS Товарное_направление,
+    COALESCE(q1.Товарный_отдел, q2.Товарный_отдел) AS Товарный_отдел,
+    COALESCE(q1.ОП, q2.ОП) AS ОП,
+    q1.ГО AS ГО_Факт,
+    q1.Разница_81_ГО AS Разница_81_ГО_Факт,
+    q1.Разница_СРС_ГО AS Разница_СРС_ГО_Факт,
+    q1.Общая_Сумма_ГО_Месяц AS Общая_Сумма_ГО_Месяц_Факт,
+    q1.Общая_Сумма_РТН_81_ГО_Месяц AS Общая_Сумма_РТН_81_ГО_Месяц_Факт,
+    q1.Общая_Сумма_РТН_СРС_ГО_Месяц AS Общая_Сумма_РТН_СРС_ГО_Месяц_Факт,
+    q1.КР_ГО AS КР_ГО_Факт,
+    q1.КР_Разница_81_ГО AS КР_Разница_81_ГО,
+    q1.КР_Разница_CPC_ГО AS КР_Разница_CPC_ГО,
+    q2.ТО AS ТО_Факт,
+    q2.Разница_81_ТО AS Разница_81_ТО_Факт,
+    q2.Разница_СРС_ТО AS Разница_СРС_ТО_Факт,
+    q2.Общая_Сумма_ТО_Месяц AS Общая_Сумма_ТО_Месяц_Факт,
+    q2.Общая_Сумма_РТН_81_ТО_Месяц AS Общая_Сумма_РТН_81_ТО_Месяц_Факт,
+    q2.Общая_Сумма_РТН_СРС_ТО_Месяц AS Общая_Сумма_РТН_СРС_ТО_Месяц_Факт,
+    q2.КР_ТО AS КР_ТО_Факт,
+    q2.КР_Разница_81_ТО AS КР_Разница_81_ТО,
+    q2.КР_Разница_CPC_ТО AS КР_Разница_CPC_ТО
+FROM Query1 q1
+FULL JOIN Query2 q2
+    ON q1.Год = q2.Год
+    AND q1.Месяц = q2.Месяц
+    AND q1.Канал_продаж = q2.Канал_продаж
+    AND q1.Специализация = q2.Специализация
+    AND q1.РК = q2.РК
+    AND q1.ДП = q2.ДП
+    AND q1.Товарное_направление = q2.Товарное_направление
+    AND q1.Товарный_отдел = q2.Товарный_отдел
+    AND q1.ОП = q2.ОП
+WHERE COALESCE(q1.Год, q2.Год) >= 2024
+  AND COALESCE(q1.Месяц, q2.Месяц) = 8),
+table_plan  
+AS (WITH
+t1 AS(WITH BudgPlanot AS (
+    SELECT 
+        EXTRACT(YEAR FROM otbp.DataInfo) AS Год,
+        EXTRACT(MONTH FROM otbp.DataInfo) AS Месяц,
+        otbp.SalesChannel,
+        otbp.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbp.Class37_Code, 5) AS ОП, 
+        ROUND(SUM(otbp.otBudgPlan) + SUM(otbp.otNdsBudgPlan), 2) AS План_ТО_81,
+        ROUND(SUM(otbp.otCostBudgPlan) + SUM(otbp.otNdsCostBudgPlan), 2) AS Себестоимость_81,
+        ROUND((SUM(otbp.otBudgPlan) + SUM(otbp.otNdsBudgPlan)) - (SUM(otbp.otCostBudgPlan) + SUM(otbp.otNdsCostBudgPlan)), 2) AS РТН_81,
+        ROUND(SUM(SUM(otbp.otBudgPlan)+SUM(otbp.otNdsBudgPlan)) OVER (PARTITION BY EXTRACT(YEAR FROM otbp.DataInfo),EXTRACT(MONTH FROM otbp.DataInfo)), 2) AS Общая_Сумма_ТО_Месяц_План,
+        ROUND(SUM((SUM(otbp.otBudgPlan) + SUM(otbp.otNdsBudgPlan)) - (SUM(otbp.otCostBudgPlan) + SUM(otbp.otNdsCostBudgPlan))) OVER (PARTITION BY EXTRACT(YEAR FROM otbp.DataInfo),EXTRACT(MONTH FROM otbp.DataInfo)), 2) AS Общая_Сумма_РТН_81_ТО_Месяц,
+        ROUND((SUM(otbp.otBudgPlan)+SUM(otbp.otNdsBudgPlan)) / LAG(SUM(otbp.otBudgPlan)+SUM(otbp.otNdsBudgPlan)) OVER (PARTITION BY 
+        otbp.SalesChannel, 
+        otbp.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbp.Class37_Code, 5)
+        ORDER BY EXTRACT(YEAR FROM otbp.DataInfo), EXTRACT(MONTH FROM otbp.DataInfo)), 5) AS КР_ТО_План,
+        ROUND((SUM(otbp.otBudgPlan) + SUM(otbp.otNdsBudgPlan)) - (SUM(otbp.otCostBudgPlan) + SUM(otbp.otNdsCostBudgPlan)) / LAG((SUM(otbp.otBudgPlan) + SUM(otbp.otNdsBudgPlan)) - (SUM(otbp.otCostBudgPlan) + SUM(otbp.otNdsCostBudgPlan))) OVER (PARTITION BY 
+        otbp.SalesChannel,
+        otbp.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbp.Class37_Code, 5)
+        ORDER BY EXTRACT(YEAR FROM otbp.DataInfo), EXTRACT(MONTH FROM otbp.DataInfo)), 2) AS КР_Разница_81_ТО
+    FROM 
+        DataPrime.otBudgPlan_Fin otbp
+    LEFT JOIN (
+        SELECT  
+            ClassGroup.ClassCodeSrc AS Class37_Code,
+            ClassGroup.ClassCodeGrp AS Class63_Code
+        FROM ClassGroup
+        WHERE ClassGroup.ClassTypeSrc = 37 
+          AND ClassGroup.ClassTypeGrp = 63 
+          AND ClassGroup.ClassCodeGrp LIKE 'УП%'
+    ) RulesGroup ON LEFT(otbp.Class37_Code, 5) = RulesGroup.Class37_Code
+    LEFT JOIN Class63 ON RulesGroup.Class63_Code = Class63.Class63_Code
+    LEFT JOIN Class305 ON otbp.Class305_Code = Class305.Class305_Code
+    GROUP BY
+        EXTRACT(YEAR FROM otbp.DataInfo),
+        EXTRACT(MONTH FROM otbp.DataInfo),
+        otbp.SalesChannel,
+        otbp.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbp.Class37_Code, 5)
+    ORDER BY Год, ОП),
+BudgPlanAccot AS (
+    SELECT 
+        EXTRACT(YEAR FROM otbpa.DataInfo) AS Год,
+        EXTRACT(MONTH FROM otbpa.DataInfo) AS Месяц,
+        otbpa.SalesChannel,
+        otbpa.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbpa.Class37_Code, 5) AS ОП, 
+        ROUND(SUM(otbpa.otBudgPlan) + SUM(otbpa.otNdsBudgPlan), 2) AS План_ТО_CPC,
+        ROUND(SUM(otbpa.otCostBudgPlan) + SUM(otbpa.otNdsCostBudgPlan), 2) AS Себестоимость_CPC,
+        ROUND((SUM(otbpa.otBudgPlan) + SUM(otbpa.otNdsBudgPlan)) - (SUM(otbpa.otCostBudgPlan) + SUM(otbpa.otNdsCostBudgPlan)), 2) AS РТН_CPC,
+        ROUND(SUM((SUM(otbpa.otBudgPlan) + SUM(otbpa.otNdsBudgPlan)) - (SUM(otbpa.otCostBudgPlan) + SUM(otbpa.otNdsCostBudgPlan))) OVER (PARTITION BY EXTRACT(YEAR FROM otbpa.DataInfo),EXTRACT(MONTH FROM otbpa.DataInfo)), 2) AS Общая_Сумма_РТН_СРС_ТО_Месяц,
+        ROUND((SUM(otbpa.otBudgPlan) + SUM(otbpa.otNdsBudgPlan)) - (SUM(otbpa.otCostBudgPlan) + SUM(otbpa.otNdsCostBudgPlan)) / LAG((SUM(otbpa.otBudgPlan) + SUM(otbpa.otNdsBudgPlan)) - (SUM(otbpa.otCostBudgPlan) + SUM(otbpa.otNdsCostBudgPlan))) OVER (PARTITION BY 
+        otbpa.SalesChannel,
+        otbpa.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbpa.Class37_Code, 5)
+        ORDER BY EXTRACT(YEAR FROM otbpa.DataInfo), EXTRACT(MONTH FROM otbpa.DataInfo)), 2) AS КР_Разница_СРС_ТО
+    FROM 
+        DataPrime.otBudgPlanAcc_Fin otbpa
+    LEFT JOIN (
+        SELECT  
+            ClassGroup.ClassCodeSrc AS Class37_Code,
+            ClassGroup.ClassCodeGrp AS Class63_Code
+        FROM ClassGroup
+        WHERE ClassGroup.ClassTypeSrc = 37 
+          AND ClassGroup.ClassTypeGrp = 63 
+          AND ClassGroup.ClassCodeGrp LIKE 'УП%'
+    ) RulesGroup ON LEFT(otbpa.Class37_Code, 5) = RulesGroup.Class37_Code
+    LEFT JOIN Class63 ON RulesGroup.Class63_Code = Class63.Class63_Code
+    LEFT JOIN Class305 ON otbpa.Class305_Code = Class305.Class305_Code
+    GROUP BY
+        EXTRACT(YEAR FROM otbpa.DataInfo),
+        EXTRACT(MONTH FROM otbpa.DataInfo),
+        otbpa.SalesChannel,
+        otbpa.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(otbpa.Class37_Code, 5)
 )
 SELECT
-    -- ИТОГОВЫЙ вывод по итогам
-    * -- Можно оставить или указать конкретные поля
-FROM final_result
-ORDER BY Sales_Channel, Campaign, OpCode;
+    COALESCE(bpot.Год, bpaot.Год) AS Год,
+    COALESCE(bpot.Месяц, bpaot.Месяц) AS Месяц,
+    COALESCE(bpot.SalesChannel, bpaot.SalesChannel) AS Канал_продаж,
+    COALESCE(bpot.SalesSubChannel, bpaot.SalesSubChannel) AS Специализация,
+    COALESCE(bpot.Class63_Name_Level2, bpaot.Class63_Name_Level2) AS РК,
+    COALESCE(bpot.Class63_Name_Level3, bpaot.Class63_Name_Level3) AS ДП,
+    COALESCE(bpot.Class305_Name_Level1, bpaot.Class305_Name_Level1) AS Товарное_направление,
+    COALESCE(bpot.Class305_Name_Level2, bpaot.Class305_Name_Level2) AS Товарный_отдел,
+    COALESCE(bpot.ОП, bpaot.ОП) AS ОП,
+    bpot.План_ТО_81 AS ТО_План,
+    bpot.РТН_81 AS ТО_РТН_81,
+    bpaot.РТН_CPC AS ТО_РТН_CPC,
+    bpot.Общая_Сумма_ТО_Месяц_План,
+    bpot.Общая_Сумма_РТН_81_ТО_Месяц AS Общая_Сумма_РТН_81_ТО_Месяц_План,
+    bpaot.Общая_Сумма_РТН_СРС_ТО_Месяц AS Общая_Сумма_РТН_СРС_ТО_Месяц_План,
+    bpot.КР_ТО_План,
+    bpot.КР_Разница_81_ТО AS КР_Разница_81_ТО_План,
+    bpaot.КР_Разница_СРС_ТО AS КР_Разница_СРС_ТО_План 
+FROM BudgPlanot bpot
+FULL JOIN BudgPlanAccot bpaot
+    ON bpot.Год = bpaot.Год
+    AND bpot.Месяц = bpaot.Месяц
+    AND bpot.SalesChannel = bpaot.SalesChannel
+    AND bpot.SalesSubChannel = bpaot.SalesSubChannel
+    AND bpot.Class63_Name_Level2 = bpaot.Class63_Name_Level2
+    AND bpot.Class63_Name_Level3 = bpaot.Class63_Name_Level3
+    AND bpot.Class305_Name_Level1 = bpaot.Class305_Name_Level1
+    AND bpot.Class305_Name_Level2 = bpaot.Class305_Name_Level2
+    AND bpot.ОП = bpaot.ОП
+  WHERE   COALESCE(bpot.Год, bpaot.Год) >= 2024 
+    AND COALESCE(bpot.Месяц, bpaot.Месяц) = 8),
+ t2 AS (WITH
+BudgPlan AS (SELECT 
+        EXTRACT(YEAR FROM ctbp.DataInfo) AS Год,
+        EXTRACT(MONTH FROM ctbp.DataInfo) AS Месяц,
+        ctbp.SalesChannel,
+        ctbp.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbp.Class37_Code, 5) AS ОП, 
+        ROUND(SUM(ctbp.CliTrnBudgPlan) + SUM(ctbp.CliTrnNdsBudgPlan), 2) AS План_ГО_81,
+        ROUND(SUM(ctbp.CliTrnCostBudgPlan) + SUM(ctbp.CliTrnNdsCostBudgPlan), 2) AS Себестоимость_81,
+        ROUND((SUM(ctbp.CliTrnBudgPlan) + SUM(ctbp.CliTrnNdsBudgPlan)) - (SUM(ctbp.CliTrnCostBudgPlan) + SUM(ctbp.CliTrnNdsCostBudgPlan)), 2) AS РТН_81,
+        ROUND(SUM(SUM(ctbp.CliTrnBudgPlan)+SUM(ctbp.CliTrnNdsBudgPlan)) OVER (PARTITION BY EXTRACT(YEAR FROM ctbp.DataInfo),EXTRACT(MONTH FROM ctbp.DataInfo)), 2) AS Общая_Сумма_ГО_Месяц_План,
+        ROUND(SUM((SUM(ctbp.CliTrnBudgPlan) + SUM(ctbp.CliTrnNdsBudgPlan)) - (SUM(ctbp.CliTrnCostBudgPlan) + SUM(ctbp.CliTrnNdsCostBudgPlan))) OVER (PARTITION BY EXTRACT(YEAR FROM ctbp.DataInfo),EXTRACT(MONTH FROM ctbp.DataInfo)), 2) AS Общая_Сумма_РТН_81_ГО_Месяц,
+        ROUND(SUM(ctbp.CliTrnBudgPlan) / LAG(SUM(ctbp.CliTrnBudgPlan)) OVER (PARTITION BY 
+        ctbp.SalesChannel, 
+        ctbp.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbp.Class37_Code, 5)
+        ORDER BY  EXTRACT(YEAR FROM ctbp.DataInfo),EXTRACT(MONTH FROM ctbp.DataInfo)), 2) AS КР_ГО_План,
+        ROUND((SUM(ctbp.CliTrnBudgPlan) + SUM(ctbp.CliTrnNdsBudgPlan)) - (SUM(ctbp.CliTrnCostBudgPlan) + SUM(ctbp.CliTrnNdsCostBudgPlan)) / LAG((SUM(ctbp.CliTrnBudgPlan) + SUM(ctbp.CliTrnNdsBudgPlan)) - (SUM(ctbp.CliTrnCostBudgPlan) + SUM(ctbp.CliTrnNdsCostBudgPlan))) OVER (PARTITION BY 
+        ctbp.SalesChannel,
+        ctbp.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbp.Class37_Code, 5)
+        ORDER BY EXTRACT(YEAR FROM ctbp.DataInfo), EXTRACT(MONTH FROM ctbp.DataInfo)), 2) AS КР_Разница_81_ГО
+    FROM 
+        DataPrime.CliTrnBudgPlan_Fin ctbp
+    LEFT JOIN (
+        SELECT  
+            ClassGroup.ClassCodeSrc AS Clas37_Code,
+            ClassGroup.ClassCodeGrp AS Class63_Code
+        FROM ClassGroup
+        WHERE ClassGroup.ClassTypeSrc = 37 
+          AND ClassGroup.ClassTypeGrp = 63 
+          AND ClassGroup.ClassCodeGrp LIKE 'УП%'
+    ) RulesGroup ON LEFT(ctbp.Class37_Code, 5) = RulesGroup.Clas37_Code
+                  AND RulesGroup.Class63_Code LIKE 'УП%'
+    LEFT JOIN Class63 ON RulesGroup.Class63_Code = Class63.Class63_Code
+    LEFT JOIN Class305 ON ctbp.Class305_Code = Class305.Class305_Code
+    GROUP BY
+        EXTRACT(YEAR FROM ctbp.DataInfo),
+        EXTRACT(MONTH FROM ctbp.DataInfo),
+        ctbp.SalesChannel,
+        ctbp.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbp.Class37_Code, 5)      
+),
+BudgPlanAcc AS (
+    SELECT 
+        EXTRACT(YEAR FROM ctbap.DataInfo) AS Год,
+        EXTRACT(MONTH FROM ctbap.DataInfo) AS Месяц,
+        ctbap.SalesChannel,
+        ctbap.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbap.Class37_Code, 5) AS ОП, 
+        ROUND(SUM(ctbap.CliTrnBudgPlan) + SUM(ctbap.CliTrnNdsBudgPlan), 2) AS План_ГО_CPC,
+        ROUND(SUM(ctbap.CliTrnCostBudgPlan) + SUM(ctbap.CliTrnNdsCostBudgPlan), 2) AS Себестоимость_CPC,
+        ROUND((SUM(ctbap.CliTrnBudgPlan) + SUM(ctbap.CliTrnNdsBudgPlan)) - (SUM(ctbap.CliTrnCostBudgPlan) + SUM(ctbap.CliTrnNdsCostBudgPlan)), 2) AS РТН_CPC,
+        ROUND(SUM((SUM(ctbap.CliTrnBudgPlan) + SUM(ctbap.CliTrnNdsBudgPlan)) - (SUM(ctbap.CliTrnCostBudgPlan) + SUM(ctbap.CliTrnNdsCostBudgPlan))) OVER (PARTITION BY EXTRACT(YEAR FROM ctbap.DataInfo),EXTRACT(MONTH FROM ctbap.DataInfo)), 2) AS Общая_Сумма_РТН_СРС_ГО_Месяц,
+        ROUND((SUM(ctbap.CliTrnBudgPlan) + SUM(ctbap.CliTrnNdsBudgPlan)) - (SUM(ctbap.CliTrnCostBudgPlan) + SUM(ctbap.CliTrnNdsCostBudgPlan)) / LAG((SUM(ctbap.CliTrnBudgPlan) + SUM(ctbap.CliTrnNdsBudgPlan)) - (SUM(ctbap.CliTrnCostBudgPlan) + SUM(ctbap.CliTrnNdsCostBudgPlan))) OVER (PARTITION BY 
+        ctbap.SalesChannel,
+        ctbap.SalesSubChannel,  
+        Class63.Class63_Name_Level2, 
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbap.Class37_Code, 5)
+        ORDER BY EXTRACT(YEAR FROM ctbap.DataInfo), EXTRACT(MONTH FROM ctbap.DataInfo)), 2) AS КР_Разница_CPC_ГО
+    FROM 
+        DataPrime.CliTrnBudgPlanAcc_Fin ctbap
+    LEFT JOIN (
+        SELECT  
+            ClassGroup.ClassCodeSrc AS Clas37_Code,
+            ClassGroup.ClassCodeGrp AS Class63_Code
+        FROM ClassGroup
+        WHERE ClassGroup.ClassTypeSrc = 37 
+          AND ClassGroup.ClassTypeGrp = 63 
+          AND ClassGroup.ClassCodeGrp LIKE 'УП%'
+    ) RulesGroup ON LEFT(ctbap.Class37_Code, 5) = RulesGroup.Clas37_Code
+                  AND RulesGroup.Class63_Code LIKE 'УП%'
+    LEFT JOIN Class63 ON RulesGroup.Class63_Code = Class63.Class63_Code
+    LEFT JOIN Class305 ON ctbap.Class305_Code = Class305.Class305_Code
+    GROUP BY
+        EXTRACT(YEAR FROM ctbap.DataInfo),
+        EXTRACT(MONTH FROM ctbap.DataInfo),
+        ctbap.SalesChannel,
+        ctbap.SalesSubChannel,
+        Class63.Class63_Name_Level2,
+        Class63.Class63_Name_Level3,
+        Class305.Class305_Name_Level1,
+        Class305.Class305_Name_Level2,
+        LEFT(ctbap.Class37_Code, 5))
+SELECT
+    COALESCE(bp.Год, bpa.Год) AS Год,
+    COALESCE(bp.Месяц, bpa.Месяц) AS Месяц,
+    COALESCE(bp.SalesChannel, bpa.SalesChannel) AS Канал_продаж,
+    COALESCE(bp.SalesSubChannel, bpa.SalesSubChannel) AS Специализация,
+    COALESCE(bp.Class63_Name_Level2, bpa.Class63_Name_Level2) AS РК,
+    COALESCE(bp.Class63_Name_Level3, bpa.Class63_Name_Level3) AS ДП,
+    COALESCE(bp.Class305_Name_Level1, bpa.Class305_Name_Level1) AS Товарное_направление,
+    COALESCE(bp.Class305_Name_Level2, bpa.Class305_Name_Level2) AS Товарный_отдел,
+    COALESCE(bp.ОП, bpa.ОП) AS ОП,
+    bp.План_ГО_81 AS  ГО_План,
+    bp.РТН_81 AS ГО_РТН_81,
+    bpa.РТН_CPC AS ГО_РТН_CPC,
+    bp.Общая_Сумма_ГО_Месяц_План AS Общая_Сумма_ГО_Месяц_План,
+    bp.Общая_Сумма_РТН_81_ГО_Месяц AS Общая_Сумма_РТН_81_ГО_Месяц_План,
+    bpa.Общая_Сумма_РТН_СРС_ГО_Месяц AS Общая_Сумма_РТН_СРС_ГО_Месяц_План,
+    bp.КР_ГО_План AS КР_ГО_План,
+    bpa.КР_Разница_CPC_ГО AS КР_Разница_CPC_ГО_План,
+    bp.КР_Разница_81_ГО AS КР_Разница_81_ГО_План
+FROM BudgPlan bp
+FULL JOIN BudgPlanAcc bpa
+    ON bp.Год = bpa.Год
+    AND bp.Месяц = bpa.Месяц
+    AND bp.SalesChannel = bpa.SalesChannel
+    AND bp.SalesSubChannel = bpa.SalesSubChannel
+    AND bp.Class63_Name_Level2 = bpa.Class63_Name_Level2
+    AND bp.Class63_Name_Level3 = bpa.Class63_Name_Level3
+    AND bp.Class305_Name_Level1 = bpa.Class305_Name_Level1
+    AND bp.Class305_Name_Level2 = bpa.Class305_Name_Level2
+    AND bp.ОП = bpa.ОП
+ WHERE   COALESCE(bp.Год, bpa.Год) >= 2024 
+    AND COALESCE(bp.Месяц, bpa.Месяц) = 8)
+ SELECT
+    COALESCE(t1.Год, t2.Год) AS Год,
+    COALESCE(t1.Месяц, t2.Месяц) AS Месяц,
+    COALESCE(t1.Канал_продаж, t2.Канал_продаж) AS Канал_продаж,
+    COALESCE(t1.Специализация, t2.Специализация) AS Специализация,
+    COALESCE(t1.РК, t2.РК) AS РК,
+    COALESCE(t1.ДП, t2.ДП) AS ДП,
+    COALESCE(t1.Товарное_направление, t2.Товарное_направление) AS Товарное_направление,
+    COALESCE(t1.Товарный_отдел, t2.Товарный_отдел) AS Товарный_отдел,
+    COALESCE(t1.ОП, t2.ОП) AS ОП,
+    t1.ТО_План AS ТО_План,
+    t1.ТО_РТН_81 AS ТО_РТН_81_План,
+    t1.ТО_РТН_CPC AS ТО_РТН_CPC_План,
+    t1.Общая_Сумма_ТО_Месяц_План AS Общая_Сумма_ТО_Месяц_План,
+    t1.Общая_Сумма_РТН_81_ТО_Месяц_План AS Общая_Сумма_РТН_81_ТО_Месяц_План,
+    t1.Общая_Сумма_РТН_СРС_ТО_Месяц_План AS Общая_Сумма_РТН_СРС_ТО_Месяц_План,
+    t1.КР_ТО_План AS КР_ТО_План,
+    t2.ГО_План AS ГО_План,
+    t2.ГО_РТН_81 AS ГО_РТН_81_План,
+    t2.ГО_РТН_CPC AS ГО_РТН_CPC_План,
+    t2.Общая_Сумма_ГО_Месяц_План AS Общая_Сумма_ГО_Месяц_План,
+    t2.Общая_Сумма_РТН_81_ГО_Месяц_План AS Общая_Сумма_РТН_81_ГО_Месяц_План,
+    t2.Общая_Сумма_РТН_СРС_ГО_Месяц_План AS Общая_Сумма_РТН_СРС_ГО_Месяц_План,
+    t2.КР_ГО_План AS КР_ГО_План,
+    t2.КР_Разница_CPC_ГО_План AS КР_Разница_CPC_ГО_План,
+    t2.КР_Разница_81_ГО_План AS КР_Разница_81_ГО_План,
+    t1.КР_Разница_СРС_ТО_План AS КР_Разница_СРС_ТО_План,
+    t1.КР_Разница_81_ТО_План AS КР_Разница_81_ТО_План
+FROM t1
+FULL JOIN t2
+    ON t1.Год = t2.Год
+    AND t1.Месяц = t2.Месяц
+    AND t1.Канал_продаж = t2.Канал_продаж
+    AND t1.Специализация = t2.Специализация
+    AND t1.РК = t2.РК
+    AND t1.ДП = t2.ДП
+    AND t1.Товарное_направление = t2.Товарное_направление
+    AND t1.Товарный_отдел = t2.Товарный_отдел
+    AND t1.ОП = t2.ОП
+WHERE COALESCE(t1.Год, t2.Год) >= 2024
+  AND COALESCE(t1.Месяц, t2.Месяц) = 8)
+SELECT
+    COALESCE(tf.Год, tp.Год) AS Год,
+    COALESCE(tf.Месяц, tp.Месяц) AS Месяц,
+    COALESCE(tf.Канал_продаж, tp.Канал_продаж) AS Канал_продаж,
+    COALESCE(tf.Специализация, tp.Специализация) AS Специализация,
+    COALESCE(tf.РК, tp.РК) AS РК,
+    COALESCE(tf.ДП, tp.ДП) AS ДП,
+    COALESCE(tf.Товарное_направление, tp.Товарное_направление) AS Товарное_направление,
+    COALESCE(tf.Товарный_отдел, tp.Товарный_отдел) AS Товарный_отдел,
+    COALESCE(tf.ОП, tp.ОП) AS ОП,
+    tp.ТО_План AS ТО_План,
+    tf.ТО_Факт AS ТО_Факт,
+    tp.ТО_РТН_81_План AS ТО_РТН_81_План,
+    tf.Разница_81_ТО_Факт AS ТО_РТН_81_Факт,
+    tp.ТО_РТН_CPC_План AS ТО_РТН_CPC_План,
+    tf.Разница_СРС_ТО_Факт AS ТО_РТН_CPC_Факт,
+    tp.ГО_План AS ГО_План,
+    tf.ГО_Факт AS ГО_Факт,
+    tp.ГО_РТН_81_План AS ГО_РТН_81_План,
+    tf.Разница_81_ГО_Факт AS ГО_РТН_81_Факт,
+    tp.ГО_РТН_CPC_План AS ГО_РТН_CPC_План,
+    tf.Разница_СРС_ГО_Факт AS ГО_РТН_CPC_Факт,
+    ROUND((tf.ТО_Факт / tp.ТО_План)*100,2) AS ВП_ТО,
+    ROUND((tf.Разница_81_ТО_Факт / tp.ТО_РТН_81_План)*100,2) AS ВП_Разница_81_ТО,
+    ROUND((tf.Разница_СРС_ТО_Факт / tp.ТО_РТН_CPC_План)*100,2) AS ВП_Разница_CPC_ТО,
+    ROUND((tf.ГО_Факт / tp.ГО_План)*100,2) AS ВП_ГО,
+    ROUND((tf.Разница_81_ГО_Факт / tp.ГО_РТН_81_План)*100,2) AS ВП_Разница_81_ГО,
+    ROUND((tf.Разница_СРС_ГО_Факт / tp.ГО_РТН_CPC_План)*100,2) AS ВП_Разница_CPC_ГО,
+    tf.Общая_Сумма_ГО_Месяц_Факт AS Общая_Сумма_ГО_Месяц_Факт,
+    tf.КР_ГО_Факт AS КР_ГО_Факт,
+    tf.Общая_Сумма_РТН_81_ГО_Месяц_Факт AS Общая_Сумма_РТН_81_ГО_Месяц_Факт,
+    tf.Общая_Сумма_РТН_СРС_ГО_Месяц_Факт AS Общая_Сумма_РТН_СРС_ГО_Месяц_Факт,
+    tf.Общая_Сумма_ТО_Месяц_Факт AS Общая_Сумма_ТО_Месяц_Факт,
+    tf.КР_ТО_Факт AS КР_ТО_Факт,
+    tf.Общая_Сумма_РТН_81_ТО_Месяц_Факт AS Общая_Сумма_РТН_81_ТО_Месяц_Факт,
+    tf.Общая_Сумма_РТН_СРС_ТО_Месяц_Факт AS Общая_Сумма_РТН_СРС_ТО_Месяц_Факт,
+    tp.Общая_Сумма_ГО_Месяц_План AS Общая_Сумма_ГО_Месяц_План,
+    tp.Общая_Сумма_РТН_81_ГО_Месяц_План AS Общая_Сумма_РТН_81_ГО_Месяц_План,
+    tp.Общая_Сумма_РТН_СРС_ГО_Месяц_План AS Общая_Сумма_РТН_СРС_ГО_Месяц_План,
+    tp.КР_ГО_План AS КР_ГО_План,
+    tp.Общая_Сумма_ТО_Месяц_План AS Общая_Сумма_ТО_Месяц_План,
+    tp.Общая_Сумма_РТН_81_ТО_Месяц_План AS Общая_Сумма_РТН_81_ТО_Месяц_План,
+    tp.Общая_Сумма_РТН_СРС_ТО_Месяц_План AS Общая_Сумма_РТН_СРС_ТО_Месяц_План,
+    tp.КР_ТО_План AS КР_ТО_План,
+    tf.КР_Разница_81_ГО AS КР_Разница_81_ГО_Факт,
+    tf.КР_Разница_CPC_ГО AS КР_Разница_CPC_ГО_Факт,
+    tf.КР_Разница_81_ТО AS КР_Разница_81_ТО_Факт,
+    tf.КР_Разница_CPC_ТО AS КР_Разница_CPC_ТО_Факт,
+    tp.КР_Разница_81_ГО_План AS КР_Разница_81_ГО_План,
+    tp.КР_Разница_CPC_ГО_План AS КР_Разница_CPC_ГО_План,
+    tp.КР_Разница_81_ТО_План AS КР_Разница_81_ТО_План,
+    tp.КР_Разница_СРС_ТО_План AS КР_Разница_CPC_ТО_План
+FROM table_fact tf
+FULL JOIN table_plan tp 
+    ON  tf.Год = tp.Год
+    AND tf.Месяц = tp.Месяц
+    AND tf.Канал_продаж = tp.Канал_продаж
+    AND tf.Специализация = tp.Специализация
+    AND tf.РК = tp.РК
+    AND tf.ДП = tp.ДП
+    AND tf.Товарное_направление = tp.Товарное_направление
+    AND tf.Товарный_отдел = tp.Товарный_отдел
+    AND tf.ОП = tp.ОП
+WHERE COALESCE(tf.Год, tp.Год) >= 2024 
+  AND COALESCE(tf.Месяц, tp.Месяц) = 8
+ORDER BY Канал_продаж, РК, ОП
